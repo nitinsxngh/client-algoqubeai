@@ -13,13 +13,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CustomTextField from '@/app/(DashboardLayout)/components/forms/theme-elements/CustomTextField';
 
-interface loginType {
+interface LoginProps {
   title?: string;
   subtitle?: React.ReactNode;
   subtext?: React.ReactNode;
 }
 
-const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
+const AuthLogin = ({ title, subtitle, subtext }: LoginProps) => {
   const router = useRouter();
 
   const [rememberMe, setRememberMe] = useState(true);
@@ -27,27 +27,28 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const API_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || 'http://localhost:4000';
+
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:4000/api/users/login', {
+      const res = await fetch(`${API_URL}/api/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // sends cookie to backend
+        credentials: 'include', // to include cookies
         body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        // Store optional user info if needed
         localStorage.setItem('user', JSON.stringify(data.user));
         router.push('/');
       } else {
         alert(data.message || 'Login failed');
       }
     } catch (err) {
-      console.error(err);
+      console.error('Login error:', err);
       alert('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
@@ -57,7 +58,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
   return (
     <>
       {title && (
-        <Typography fontWeight="700" variant="h2" mb={1}>
+        <Typography fontWeight={700} variant="h2" mb={1}>
           {title}
         </Typography>
       )}
@@ -67,7 +68,13 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
       <Box>
         <Stack spacing={3} mb={2}>
           <Box>
-            <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="email" mb="5px">
+            <Typography
+              variant="subtitle1"
+              fontWeight={600}
+              component="label"
+              htmlFor="email"
+              mb="5px"
+            >
               Email Address
             </Typography>
             <CustomTextField
@@ -76,12 +83,20 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
               variant="outlined"
               fullWidth
               value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setEmail(e.target.value)
+              }
             />
           </Box>
 
           <Box>
-            <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="password" mb="5px">
+            <Typography
+              variant="subtitle1"
+              fontWeight={600}
+              component="label"
+              htmlFor="password"
+              mb="5px"
+            >
               Password
             </Typography>
             <CustomTextField
@@ -90,12 +105,19 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
               variant="outlined"
               fullWidth
               value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setPassword(e.target.value)
+              }
             />
           </Box>
         </Stack>
 
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={3}
+        >
           <FormControlLabel
             control={
               <Checkbox
@@ -112,7 +134,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
           <Typography
             component={Link}
             href="/forgot-password"
-            fontWeight="500"
+            fontWeight={500}
             sx={{ textDecoration: 'none', color: 'primary.main' }}
           >
             Forgot Password?

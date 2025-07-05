@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -18,13 +18,14 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import { IconPlus, IconRobot } from '@tabler/icons-react';
+import { IconPlus, IconRobot, IconTrash } from '@tabler/icons-react';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
 
 const ChatboxPage = () => {
+  const [chatbox, setChatbox] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const [orgName, setOrgName] = useState('');
   const [category, setCategory] = useState('');
@@ -35,41 +36,103 @@ const ChatboxPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const handleToggleForm = () => setShowForm(true);
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT!;
+  const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL!;
 
-  const handleSave = async () => {
+  const fetchChatbox = async () => {
     try {
-      const res = await fetch('http://localhost:4000/api/chatboxes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          organizationName: orgName,
-          category,
-          domainUrl,
-          customContent,
-          status: 'active',
-          textFont: 'default',
-          themeColor: '#000000',
-          displayName: orgName,
-        }),
+      const res = await fetch(`${BACKEND_URL}/api/chatboxes`, {
+        method: 'GET',
+        credentials: 'include', // ✅ Send cookie with the request
       });
   
-      if (!res.ok) throw new Error('Failed to create chatbot');
+      if (!res.ok) {
+        throw new Error(`Failed to fetch chatbox: ${res.status}`);
+      }
   
       const data = await res.json();
-      console.log('Chatbot created:', data);
-      setSaved(true);
+      setChatbox(data);
     } catch (err) {
-      alert('Error creating chatbot');
+      console.error('Failed to fetch chatbot:', err);
+    }
+  };
+  
+
+  useEffect(() => {
+    fetchChatbox();
+  }, []);
+
+  const handleSave = async () => {
+    if (!orgName || !category || !domainUrl) {
+      alert('Please fill all required fields');
+      return;
+    }
+
+    const payload = {
+      organizationName: orgName,
+      category,
+      domainUrl,
+      customContent,
+      status: 'active',
+      textFont: 'default',
+      themeColor: '#000000',
+      displayName: orgName,
+    };
+
+    try {
+      const endpoint = isEditing
+        ? `${BACKEND_URL}/api/chatboxes/${chatbox._id}`
+        : `${BACKEND_URL}/api/chatboxes`;
+
+        const res = await fetch(endpoint, {
+          method: isEditing ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'include', // ✅ This line is critical
+        });
+        
+
+      if (!res.ok) throw new Error('Save failed');
+
+      const data = await res.json();
+      setChatbox(data.chatbox);
+      setShowForm(false);
+      setIsEditing(false);
+    } catch (err) {
+      alert(`Error ${isEditing ? 'updating' : 'creating'} chatbot`);
+      console.error(err);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!id) {
+      alert('Invalid chatbot ID');
+      return;
+    }
+  
+    if (!confirm('Are you sure you want to delete this chatbot?')) return;
+  
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/chatboxes/${id}`, {
+        method: 'DELETE',
+        credentials: 'include', // ✅ ADD THIS LINE
+      });
+  
+      if (!res.ok) throw new Error('Delete failed');
+      setChatbox(null);
+    } catch (err) {
+      alert('Error deleting chatbot');
       console.error(err);
     }
   };
   
 
+  const chatbotExists = !!chatbox && chatbox._id;
+
   return (
     <PageContainer title="Chatbox" description="Manage your chatbot here.">
       <DashboardCard title="Chatbox Manager">
-        {!showForm ? (
+        {!chatbotExists && !showForm ? (
           <Box
             display="flex"
             flexDirection="column"
@@ -93,117 +156,158 @@ const ChatboxPage = () => {
               variant="contained"
               startIcon={<IconPlus />}
               sx={{ mt: 3 }}
-              onClick={handleToggleForm}
+              onClick={() => {
+                setOrgName('');
+                setCategory('');
+                setDomainUrl('');
+                setCustomContent('');
+                setFile(null);
+                setIsEditing(false);
+                setShowForm(true);
+              }}
             >
               Add Chatbot
             </Button>
           </Box>
+        ) : showForm ? (
+          <Fade in timeout={400}>
+            <Box maxWidth={600} width="100%" mx="auto">
+              <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+                <Typography variant="h6" mb={3}>
+                  {isEditing ? 'Edit Chatbot' : 'Create Chatbot'}
+                </Typography>
+
+                <Stack spacing={2} mb={3}>
+                  <TextField
+                    label="Organization Name"
+                    fullWidth
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                  />
+                  <FormControl fullWidth>
+                    <InputLabel id="category-label">Category</InputLabel>
+                    <Select
+                      labelId="category-label"
+                      value={category}
+                      label="Category"
+                      onChange={(e) => setCategory(e.target.value)}
+                    >
+                      <MenuItem value="Support">Support</MenuItem>
+                      <MenuItem value="Sales">Sales</MenuItem>
+                      <MenuItem value="FAQ">FAQ</MenuItem>
+                      <MenuItem value="Feedback">Feedback</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    label="Domain URL"
+                    placeholder="https://yourdomain.com"
+                    fullWidth
+                    value={domainUrl}
+                    onChange={(e) => setDomainUrl(e.target.value)}
+                    disabled={isEditing}
+                  />
+                  <Button variant="outlined" component="label">
+                    Upload File
+                    <input
+                      type="file"
+                      hidden
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) setFile(e.target.files[0]);
+                      }}
+                    />
+                  </Button>
+                  <TextField
+                    label="Custom Content"
+                    multiline
+                    rows={4}
+                    fullWidth
+                    value={customContent}
+                    onChange={(e) => setCustomContent(e.target.value)}
+                  />
+                </Stack>
+
+                <Stack direction="row" justifyContent="flex-end" spacing={2}>
+                  <Button
+                    onClick={() => {
+                      setShowForm(false);
+                      setIsEditing(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button variant="contained" onClick={handleSave}>
+                    Save
+                  </Button>
+                </Stack>
+              </Paper>
+            </Box>
+          </Fade>
         ) : (
-          <Stack
-            direction={isMobile ? 'column' : 'row'}
-            spacing={4}
-            justifyContent="center"
-            alignItems="flex-start"
-            flexWrap="wrap"
-          >
-            {/* Chatbot Form */}
-            <Fade in timeout={400}>
-              <Box flex={1} maxWidth={600} width="100%">
-                <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
-                  <Typography variant="h6" mb={3}>
-                    Create Chatbot
-                  </Typography>
-
-                  <Stack spacing={2} direction={{ xs: 'column', sm: 'row' }} mb={3}>
-                    <TextField
-                      label="Organization Name"
-                      fullWidth
-                      value={orgName}
-                      onChange={(e) => setOrgName(e.target.value)}
-                    />
-                    <FormControl fullWidth>
-                      <InputLabel id="category-label">Category</InputLabel>
-                      <Select
-                        labelId="category-label"
-                        value={category}
-                        label="Category"
-                        onChange={(e) => setCategory(e.target.value)}
-                      >
-                        <MenuItem value="Support">Support</MenuItem>
-                        <MenuItem value="Sales">Sales</MenuItem>
-                        <MenuItem value="FAQ">FAQ</MenuItem>
-                        <MenuItem value="Feedback">Feedback</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Stack>
-
-                  <Box mb={1}>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      Inject Content
-                    </Typography>
-                    <Typography variant="caption" color="error">
-                      [Note: Domain URL once injected cannot be reversed]
+          <Slide direction="up" in={chatbotExists} mountOnEnter unmountOnExit>
+            <Box maxWidth={600} width="100%" mx="auto">
+              <Paper elevation={4} sx={{ p: 4, borderRadius: 3, backgroundColor: '#f9f9f9' }}>
+                <Stack direction="row" alignItems="center" spacing={2} mb={2}>
+                  <IconRobot size={32} />
+                  <Box>
+                    <Typography variant="h6">{chatbox.organizationName}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {chatbox.category} | {chatbox.domainUrl}
                     </Typography>
                   </Box>
+                </Stack>
 
-                  <Stack spacing={2}>
-                    <TextField
-                      label="Domain URL"
-                      placeholder="https://yourdomain.com"
-                      fullWidth
-                      value={domainUrl}
-                      onChange={(e) => setDomainUrl(e.target.value)}
-                    />
-                    <Button variant="outlined" component="label">
-                      Upload File
-                      <input
-                        type="file"
-                        hidden
-                        onChange={(e) => {
-                          if (e.target.files?.[0]) setFile(e.target.files[0]);
-                        }}
-                      />
-                    </Button>
-                    <TextField
-                      label="Custom Content"
-                      multiline
-                      rows={4}
-                      placeholder="Paste some reference content..."
-                      fullWidth
-                      value={customContent}
-                      onChange={(e) => setCustomContent(e.target.value)}
-                    />
-                  </Stack>
+                <Typography variant="body2" color="text.secondary" mb={2}>
+                  {chatbox.customContent || 'No custom content provided.'}
+                </Typography>
 
-                  <Stack direction="row" justifyContent="flex-end" spacing={1} mt={3}>
-                    <Button onClick={() => setShowForm(false)}>Cancel</Button>
-                    <Button variant="contained" color="primary" onClick={handleSave}>
-                      Save
-                    </Button>
-                  </Stack>
+                <Typography variant="subtitle1" mt={4}>
+                  Embed This Chatbot:
+                </Typography>
+                <Paper variant="outlined" sx={{ p: 2, mt: 1, backgroundColor: '#f0f0f0' }}>
+                  <code style={{ wordBreak: 'break-all' }}>
+                    {`<script src="${FRONTEND_URL}/embed.js" data-name="${chatbox.name}"></script>`}
+                  </code>
                 </Paper>
-              </Box>
-            </Fade>
+                <Button
+                  variant="text"
+                  size="small"
+                  sx={{ mt: 1 }}
+                  onClick={() =>
+                    navigator.clipboard.writeText(
+                      `<script src="${FRONTEND_URL}/embed.js" data-name="${chatbox.name}"></script>`
+                    )
+                  }
+                >
+                  Copy Embed Script
+                </Button>
 
-            {/* Confirmation Box */}
-            <Slide direction="up" in={saved} mountOnEnter unmountOnExit>
-              <Box flex={1} maxWidth={600} width="100%">
-                <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
-                  <Typography variant="h6" mb={2}>
-                    🎉 Chatbot Created
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Your chatbot is now active. You can configure responses or view usage in analytics.
-                  </Typography>
-                  <Box mt={3}>
-                    <Button variant="outlined" color="primary" href="/chatbox">
-                      Go to Dashboard
-                    </Button>
-                  </Box>
-                </Paper>
-              </Box>
-            </Slide>
-          </Stack>
+                <Stack direction="row" spacing={2} mt={4}>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    startIcon={<IconTrash />}
+                    onClick={() => handleDelete(chatbox._id)}
+                  >
+                    Delete Chatbot
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      setOrgName(chatbox.organizationName);
+                      setCategory(chatbox.category);
+                      setDomainUrl(chatbox.domainUrl);
+                      setCustomContent(chatbox.customContent);
+                      setFile(null);
+                      setIsEditing(true);
+                      setShowForm(true);
+                    }}
+                  >
+                    Edit
+                  </Button>
+                </Stack>
+              </Paper>
+            </Box>
+          </Slide>
         )}
       </DashboardCard>
     </PageContainer>

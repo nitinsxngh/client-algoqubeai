@@ -12,11 +12,13 @@ import {
   ListItemText,
   Button,
 } from '@mui/material';
-
 import { IconListCheck, IconMail, IconUser } from '@tabler/icons-react';
 
 const Profile = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const API_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || 'http://localhost:4000';
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -25,25 +27,24 @@ const Profile = () => {
   const handleClose = () => setAnchorEl(null);
 
   const handleLogout = async () => {
+    setLoggingOut(true);
     try {
-      // Invalidate the server-side cookie
-      await fetch('http://localhost:4000/api/users/logout', {
+      await fetch(`${API_URL}/api/users/logout`, {
         method: 'POST',
         credentials: 'include',
       });
-  
-      // Remove client-side token (if stored)
+
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-  
-      // Redirect to login
+
       window.location.href = '/authentication/login';
     } catch (err) {
       console.error('Logout failed', err);
       alert('Failed to logout');
+    } finally {
+      setLoggingOut(false);
     }
   };
-  
 
   return (
     <Box>
@@ -51,6 +52,9 @@ const Profile = () => {
         size="large"
         color="inherit"
         onClick={handleClick}
+        aria-label="profile options"
+        aria-controls="profile-menu"
+        aria-haspopup="true"
         sx={{
           ...(anchorEl && {
             color: 'primary.main',
@@ -65,6 +69,7 @@ const Profile = () => {
       </IconButton>
 
       <Menu
+        id="profile-menu"
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleClose}
@@ -76,13 +81,14 @@ const Profile = () => {
           },
         }}
       >
-        <MenuItem>
+        <MenuItem onClick={handleClose} component={Link} href="/profile">
           <ListItemIcon>
             <IconUser width={20} />
           </ListItemIcon>
           <ListItemText>My Profile</ListItemText>
         </MenuItem>
-        <MenuItem>
+
+        <MenuItem onClick={handleClose} component={Link} href="/account">
           <ListItemIcon>
             <IconMail width={20} />
           </ListItemIcon>
@@ -90,8 +96,14 @@ const Profile = () => {
         </MenuItem>
 
         <Box mt={1} py={1} px={2}>
-          <Button variant="outlined" color="primary" fullWidth onClick={handleLogout}>
-            Logout
+          <Button
+            variant="outlined"
+            color="primary"
+            fullWidth
+            onClick={handleLogout}
+            disabled={loggingOut}
+          >
+            {loggingOut ? 'Logging out…' : 'Logout'}
           </Button>
         </Box>
       </Menu>

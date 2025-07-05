@@ -31,6 +31,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const pathname = usePathname();
 
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT;
+
   useEffect(() => {
     const isPublic = PUBLIC_ROUTES.includes(pathname);
 
@@ -39,8 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       return;
     }
 
-    // Verify auth using backend (cookie-based)
-    fetch("http://localhost:4000/api/users/me", {
+    fetch(`${backendUrl}/api/users/me`, {
       method: "GET",
       credentials: "include",
     })
@@ -54,7 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       .catch(() => {
         router.replace("/authentication/login");
       });
-  }, [pathname, router]);
+  }, [pathname, router, backendUrl]);
 
   if (!authChecked) {
     return (
