@@ -157,7 +157,7 @@ const ChatboxForm = ({
           <Box>
             <Stack direction="row" justifyContent="space-between" spacing={2}>
               <Typography variant="caption" color="text.secondary">
-                You can't change domain once entered
+                You can not change domain once entered
               </Typography>
               <FormControlLabel
                 control={
