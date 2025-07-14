@@ -1,8 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Box,
   Typography,
   Table,
   TableHead,
@@ -12,63 +11,92 @@ import {
   Paper,
   Chip,
   Stack,
+  CircularProgress,
+  Box,
+  Alert,
 } from '@mui/material';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
 
-// 🇮🇳 Simulated activity logs (India-specific)
-const activityLogs = [
-  {
-    timestamp: '2025-06-24 09:45 AM',
-    ip: '49.205.117.10',
-    location: 'Mumbai, India',
-    device: 'Chrome on Windows',
-    status: 'Success',
-  },
-  {
-    timestamp: '2025-06-22 06:20 PM',
-    ip: '103.27.9.88',
-    location: 'Delhi, India',
-    device: 'Edge on Windows',
-    status: 'Success',
-  },
-  {
-    timestamp: '2025-06-20 01:12 PM',
-    ip: '182.79.114.52',
-    location: 'Bengaluru, India',
-    device: 'Chrome on Android',
-    status: 'Failed',
-  },
-  {
-    timestamp: '2025-06-18 10:30 AM',
-    ip: '106.51.72.180',
-    location: 'Hyderabad, India',
-    device: 'Safari on iPhone',
-    status: 'Success',
-  },
-];
+interface LoginEntry {
+  timestamp: string;
+  ip: string;
+  location: string;
+  device: string;
+  status: 'Success' | 'Failed';
+}
+
+interface ActivityData {
+  lastLogin: LoginEntry;
+  loginHistory: LoginEntry[];
+}
 
 const ActivityPage = () => {
-  const lastLogin = activityLogs[0];
+  const [activity, setActivity] = useState<ActivityData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchActivity = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_ENDPOINT}/api/users/activity`, {
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || 'Failed to fetch activity.');
+        }
+
+        const data: ActivityData = await res.json();
+        setActivity(data);
+      } catch (err: any) {
+        console.error('Error fetching activity:', err);
+        setError(err.message || 'An unexpected error occurred.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActivity();
+  }, []);
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" mt={5}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box mt={4}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
+  if (!activity) {
+    return (
+      <Typography variant="h6" color="text.secondary" mt={4}>
+        No activity data available.
+      </Typography>
+    );
+  }
+
+  const { lastLogin, loginHistory } = activity;
 
   return (
     <PageContainer title="Activity" description="Track your recent login sessions and activity.">
       <Stack spacing={4}>
-        {/* Last login summary */}
+        {/* Last Login */}
         <DashboardCard title="Last Login">
           <Paper sx={{ p: 3, borderRadius: 2 }}>
-            <Typography variant="body1" mb={1}>
-              <strong>Time:</strong> {lastLogin.timestamp}
-            </Typography>
-            <Typography variant="body1" mb={1}>
-              <strong>IP Address:</strong> {lastLogin.ip}
-            </Typography>
-            <Typography variant="body1" mb={1}>
-              <strong>Location:</strong> {lastLogin.location}
-            </Typography>
-            <Typography variant="body1">
-              <strong>Device:</strong> {lastLogin.device}
-            </Typography>
+            <Typography variant="body1" mb={1}><strong>Time:</strong> {new Date(lastLogin.timestamp).toLocaleString()}</Typography>
+            <Typography variant="body1" mb={1}><strong>IP Address:</strong> {lastLogin.ip}</Typography>
+            <Typography variant="body1" mb={1}><strong>Location:</strong> {lastLogin.location}</Typography>
+            <Typography variant="body1"><strong>Device:</strong> {lastLogin.device}</Typography>
           </Paper>
         </DashboardCard>
 
@@ -86,9 +114,9 @@ const ActivityPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {activityLogs.map((log, index) => (
+                {loginHistory.map((log, index) => (
                   <TableRow key={index}>
-                    <TableCell>{log.timestamp}</TableCell>
+                    <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
                     <TableCell>{log.ip}</TableCell>
                     <TableCell>{log.location}</TableCell>
                     <TableCell>{log.device}</TableCell>
