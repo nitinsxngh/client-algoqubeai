@@ -2,7 +2,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       const scriptTag = document.currentScript || document.querySelector('script[data-name]');
       const chatbotName = scriptTag?.getAttribute('data-name');
-      const backendEndpoint = scriptTag?.getAttribute('data-endpoint') || 'https://algoqubeai.xendrax.in';
+      const backendEndpoint = scriptTag?.getAttribute('data-endpoint') || 'http://localhost:4000';
       const buttonText = scriptTag?.getAttribute('data-button-text') || '💬 Chat';
   
       if (!chatbotName) {

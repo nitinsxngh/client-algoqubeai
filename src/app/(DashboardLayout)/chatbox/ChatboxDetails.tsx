@@ -66,7 +66,7 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
 
       {/* Right Section: Preview + Configuration + Embed */}
       <Box flex={1}>
-        {/* Live Preview - moved to top */}
+        {/* Live Preview */}
         <Paper elevation={2} sx={{ p: 2, borderRadius: 2, backgroundColor: '#fff', mb: 2 }}>
           <Typography variant="subtitle2" gutterBottom>
             Live Chat Preview
@@ -147,7 +147,11 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
           <Typography variant="subtitle2" gutterBottom>
             Embed Script
           </Typography>
-          <ChatboxEmbed frontendUrl={frontendUrl} name={chatbox.name} />
+          <ChatboxEmbed
+            frontendUrl={frontendUrl}
+            name={chatbox.name}
+            backendUrl={BACKEND_URL}
+          />
         </Paper>
       </Box>
     </Box>
