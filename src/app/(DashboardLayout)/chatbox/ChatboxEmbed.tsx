@@ -10,7 +10,7 @@ const ChatboxEmbed = ({
 }) => {
   const backendUrl = 'https://algoqubeai.xendrax.in'; // Hardcoded backend URL
 
-  const embedCode = `<script src="${frontendUrl}/embed.js" data-name="${name}" data-endpoint="${backendUrl}"></script>`;
+  const embedCode = `<script src="${frontendUrl}/embed.js" data-name="${name}" data-endpoint="https://algoqubeai.xendrax.in"></script>`;
 
   return (
     <>
