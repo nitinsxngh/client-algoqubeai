@@ -149,6 +149,7 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
           <ChatboxEmbed
             frontendUrl={frontendUrl}
             name={chatbox.name}
+            data-endpoint="https://algoqubeai.xendrax.in"
           />
         </Paper>
       </Box>
