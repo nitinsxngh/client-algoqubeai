@@ -45,7 +45,7 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
       mx="auto"
       mt={4}
     >
-      {/* Left Section: Info */}
+      {/* Left Section */}
       <Box flex={1}>
         <Paper elevation={3} sx={{ p: 3, borderRadius: 2, backgroundColor: '#fdfdfd' }}>
           <Stack direction="row" alignItems="center" spacing={2} mb={2}>
@@ -57,14 +57,13 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
               </Typography>
             </Box>
           </Stack>
-
           <Typography variant="body2" color="text.secondary" mb={2}>
             {chatbox.customContent || 'No custom content provided.'}
           </Typography>
         </Paper>
       </Box>
 
-      {/* Right Section: Preview + Configuration + Embed */}
+      {/* Right Section */}
       <Box flex={1}>
         {/* Live Preview */}
         <Paper elevation={2} sx={{ p: 2, borderRadius: 2, backgroundColor: '#fff', mb: 2 }}>
@@ -78,7 +77,7 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
           />
         </Paper>
 
-        {/* Configuration Panel */}
+        {/* Configuration */}
         <Paper elevation={3} sx={{ p: 3, borderRadius: 2, backgroundColor: '#f9f9f9', mb: 2 }}>
           <Typography variant="subtitle1" gutterBottom>
             Configuration
@@ -150,7 +149,6 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
           <ChatboxEmbed
             frontendUrl={frontendUrl}
             name={chatbox.name}
-            backendUrl={BACKEND_URL}
           />
         </Paper>
       </Box>

@@ -4,12 +4,12 @@ import { Paper, Button, Typography } from '@mui/material';
 const ChatboxEmbed = ({
   frontendUrl,
   name,
-  backendUrl,
 }: {
   frontendUrl: string;
   name: string;
-  backendUrl: string;
 }) => {
+  const backendUrl = 'https://algoqubeai.xendrax.in'; // Hardcoded backend URL
+
   const embedCode = `<script src="${frontendUrl}/embed.js" data-name="${name}" data-endpoint="${backendUrl}"></script>`;
 
   return (
