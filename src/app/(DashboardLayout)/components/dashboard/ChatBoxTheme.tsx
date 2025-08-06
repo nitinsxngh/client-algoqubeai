@@ -15,6 +15,7 @@ import {
 import { Edit as EditIcon } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import ChatboxLivePreview from '@/app/(DashboardLayout)/chatbox/ChatboxLivePreview';
+import { authenticatedFetch } from '@/utils/api';
 
 const ChatboxTheme = () => {
   const theme = useTheme();
@@ -25,42 +26,27 @@ const ChatboxTheme = () => {
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT!;
 
   useEffect(() => {
-    const fetchChatbox = async () => {
-      try {
-        const userRes = await fetch(`${BACKEND_URL}/api/users/me`, {
-          credentials: 'include',
-        });
-        
-        if (!userRes.ok) {
-          throw new Error('Failed to fetch user data');
+    const fetchUserAndChatboxes = async () => {
+        setLoading(true);
+        try {
+            const userRes = await authenticatedFetch(`${BACKEND_URL}/api/users/me`, {
+                method: 'GET',
+            });
+            if (!userRes.ok) throw new Error('User not authenticated');
+            const userData = await userRes.json();
+            const chatboxRes = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes?createdBy=${userData._id}`, {
+                method: 'GET',
+            });
+            const chatboxData = await chatboxRes.json();
+            setChatbox(Array.isArray(chatboxData) ? chatboxData[0] : chatboxData);
+        } catch (err) {
+            setChatbox(null);
+        } finally {
+            setLoading(false);
         }
-        
-        const userData = await userRes.json();
-        const user = userData; // API now returns user object directly
-
-        const chatboxRes = await fetch(`${BACKEND_URL}/api/chatboxes?createdBy=${user._id}`, {
-          credentials: 'include',
-        });
-        
-        if (!chatboxRes.ok) {
-          throw new Error('Failed to fetch chatbox data');
-        }
-        
-        const chatboxData = await chatboxRes.json();
-        const chatboxes = Array.isArray(chatboxData) ? chatboxData : [chatboxData];
-        
-        // Use the first active chatbox or the first one available
-        const activeChatbox = chatboxes.find(cb => cb.status === 'active') || chatboxes[0];
-        setChatbox(activeChatbox);
-      } catch (err) {
-        console.error('Error fetching chatbox:', err);
-        setError('Failed to load chatbox preview');
-      } finally {
-        setLoading(false);
-      }
     };
 
-    fetchChatbox();
+    fetchUserAndChatboxes();
   }, [BACKEND_URL]);
 
   if (loading) {

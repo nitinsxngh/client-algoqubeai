@@ -28,6 +28,7 @@ import {
   IconLoader
 } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { authenticatedFetch } from '@/utils/api';
 
 const ChatboxPage = () => {
   const [chatbox, setChatbox] = useState<any>(undefined);
@@ -60,20 +61,8 @@ const ChatboxPage = () => {
 
   const fetchChatbox = async () => {
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem('token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const res = await fetch(`${BACKEND_URL}/api/chatboxes`, {
+      const res = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes`, {
         method: 'GET',
-        headers,
-        credentials: 'include',
       });
       if (!res.ok) throw new Error(`Fetch error ${res.status}`);
       const data = await res.json();
@@ -180,11 +169,10 @@ const ChatboxPage = () => {
         ? `${BACKEND_URL}/api/chatboxes/${chatbox._id}`
         : `${BACKEND_URL}/api/chatboxes`;
 
-      const res = await fetch(endpoint, {
+      const res = await authenticatedFetch(endpoint, {
         method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        credentials: 'include',
       });
 
       if (!res.ok) throw new Error('Save failed');
@@ -221,9 +209,8 @@ const ChatboxPage = () => {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this chatbot?')) return;
     try {
-      const res = await fetch(`${BACKEND_URL}/api/chatboxes/${id}`, {
+      const res = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes/${id}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
       if (!res.ok) throw new Error('Delete failed');
       setChatbox(null);

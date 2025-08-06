@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { authenticatedFetch } from '@/utils/api';
 
 interface TokenUsage {
   tokens: {
@@ -51,19 +52,8 @@ const TokenUsageOverview = () => {
         setRefreshing(true);
       }
       
-      // Get token from localStorage
-      const token = localStorage.getItem('token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const response = await fetch(`${BACKEND_URL}/api/users/token-usage`, {
-        headers,
-        credentials: 'include',
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/users/token-usage`, {
+        method: 'GET',
       });
       
       if (response.ok) {
@@ -101,20 +91,8 @@ const TokenUsageOverview = () => {
 
   const handleInitializeTokens = async () => {
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem('token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const response = await fetch(`${BACKEND_URL}/api/users/initialize-tokens`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/users/initialize-tokens`, {
         method: 'POST',
-        headers,
-        credentials: 'include',
       });
       
       if (response.ok) {
@@ -131,20 +109,8 @@ const TokenUsageOverview = () => {
 
   const handleTestTokenConsumption = async () => {
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem('token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const response = await fetch(`${BACKEND_URL}/api/users/test-token-consumption`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/users/test-token-consumption`, {
         method: 'POST',
-        headers,
-        credentials: 'include',
         body: JSON.stringify({ amount: 5 }),
       });
       

@@ -40,6 +40,7 @@ import {
   PowerSettingsNew as PowerIcon,
 } from '@mui/icons-material';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
+import { authenticatedFetch } from '@/utils/api';
 
 interface UserSettings {
   profile: {
@@ -106,188 +107,125 @@ const SettingsPage = () => {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${BACKEND_URL}/api/users/settings`, {
-        credentials: 'include',
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/users/settings`, {
+        method: 'GET',
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch settings');
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(data);
+        setProfileForm({
+          name: data.profile.name || '',
+          email: data.profile.email || '',
+          phone: data.profile.phone || '',
+        });
+        setNotificationForm({
+          emailAlerts: data.preferences?.notifications?.emailAlerts ?? true,
+          usageReminders: data.preferences?.notifications?.usageReminders ?? false,
+          productUpdates: data.preferences?.notifications?.productUpdates ?? false,
+        });
+      } else {
+        setError('Failed to fetch settings');
       }
-
-      const data = await response.json();
-      setSettings(data);
-      setProfileForm({
-        name: data.profile.name || '',
-        email: data.profile.email || '',
-        phone: data.profile.phone || '',
-      });
-      setNotificationForm({
-        emailAlerts: data.preferences?.notifications?.emailAlerts ?? true,
-        usageReminders: data.preferences?.notifications?.usageReminders ?? false,
-        productUpdates: data.preferences?.notifications?.productUpdates ?? false,
-      });
-    } catch (err) {
-      setError('Failed to load settings');
-      console.error('Error fetching settings:', err);
+    } catch (error) {
+      setError('Failed to fetch settings');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleProfileUpdate = async () => {
+  const updateProfile = async (profileData: any) => {
+    setSaving(true);
     try {
-      setSaving(true);
-      setError('');
-      setSuccess('');
-
-      const response = await fetch(`${BACKEND_URL}/api/users/profile`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/users/profile`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(profileForm),
+        body: JSON.stringify(profileData),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update profile');
+      if (response.ok) {
+        setSuccess('Profile updated successfully');
+        fetchSettings();
+      } else {
+        setError('Failed to update profile');
       }
-
-      setSuccess('Profile updated successfully!');
-      await fetchSettings(); // Refresh settings
-    } catch (err: any) {
-      setError(err.message || 'Failed to update profile');
+    } catch (error) {
+      setError('Failed to update profile');
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePasswordChange = async () => {
+  const updatePassword = async (passwordData: any) => {
+    setSaving(true);
     try {
-      setSaving(true);
-      setError('');
-      setSuccess('');
-
-      if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-        throw new Error('New passwords do not match');
-      }
-
-      if (passwordForm.newPassword.length < 8) {
-        throw new Error('New password must be at least 8 characters long');
-      }
-
-      const response = await fetch(`${BACKEND_URL}/api/users/password`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/users/password`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword,
-        }),
+        body: JSON.stringify(passwordData),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to change password');
+      if (response.ok) {
+        setSuccess('Password updated successfully');
+      } else {
+        setError('Failed to update password');
       }
-
-      setSuccess('Password changed successfully!');
-      setPasswordForm({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-    } catch (err: any) {
-      setError(err.message || 'Failed to change password');
+    } catch (error) {
+      setError('Failed to update password');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleNotificationUpdate = async () => {
+  const updateNotifications = async (notificationData: any) => {
+    setSaving(true);
     try {
-      setSaving(true);
-      setError('');
-      setSuccess('');
-
-      const response = await fetch(`${BACKEND_URL}/api/users/notifications`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/users/notifications`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(notificationForm),
+        body: JSON.stringify(notificationData),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update notifications');
+      if (response.ok) {
+        setSuccess('Notification settings updated successfully');
+        fetchSettings();
+      } else {
+        setError('Failed to update notification settings');
       }
-
-      setSuccess('Notification preferences updated successfully!');
-    } catch (err: any) {
-      setError(err.message || 'Failed to update notifications');
+    } catch (error) {
+      setError('Failed to update notification settings');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeactivateAccount = async () => {
+  const deactivateAccount = async () => {
+    setSaving(true);
     try {
-      setSaving(true);
-      setError('');
-      setSuccess('');
-
-      const response = await fetch(`${BACKEND_URL}/api/users/deactivate`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          password: passwordForm.currentPassword,
-        }),
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/users/deactivate`, {
+        method: 'POST',
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to deactivate account');
+      if (response.ok) {
+        setSuccess('Account deactivated successfully');
+      } else {
+        setError('Failed to deactivate account');
       }
-
-      // Redirect to login page
-      window.location.href = '/login';
-    } catch (err: any) {
-      setError(err.message || 'Failed to deactivate account');
+    } catch (error) {
+      setError('Failed to deactivate account');
     } finally {
       setSaving(false);
-      setDeactivateDialog(false);
     }
   };
 
-  const handleDeleteAccount = async () => {
+  const deleteAccount = async () => {
+    setSaving(true);
     try {
-      setSaving(true);
-      setError('');
-      setSuccess('');
-
-      const response = await fetch(`${BACKEND_URL}/api/users/account`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/users/account`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          password: passwordForm.currentPassword,
-          confirmation: deleteConfirmation,
-        }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete account');
+      if (response.ok) {
+        setSuccess('Account deleted successfully');
+      } else {
+        setError('Failed to delete account');
       }
-
-      // Redirect to login page
-      window.location.href = '/login';
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete account');
+    } catch (error) {
+      setError('Failed to delete account');
     } finally {
       setSaving(false);
-      setDeleteDialog(false);
-      setDeleteConfirmation('');
     }
   };
 
@@ -449,7 +387,7 @@ const SettingsPage = () => {
                 <Button 
                   variant="contained" 
                   startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
-                  onClick={handleProfileUpdate}
+                  onClick={() => updateProfile(profileForm)}
                   disabled={saving}
                   sx={{ 
                     borderRadius: 2,
@@ -593,7 +531,7 @@ const SettingsPage = () => {
                 <Button 
                   variant="contained" 
                   startIcon={<LockIcon />}
-                  onClick={handlePasswordChange}
+                  onClick={() => updatePassword({ currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword })}
                   disabled={saving}
                   sx={{ 
                     borderRadius: 2,
@@ -710,7 +648,7 @@ const SettingsPage = () => {
                 <Button 
                   variant="contained" 
                   startIcon={<SaveIcon />}
-                  onClick={handleNotificationUpdate}
+                  onClick={() => updateNotifications(notificationForm)}
                   disabled={saving}
                   sx={{ 
                     borderRadius: 2,
@@ -843,7 +781,7 @@ const SettingsPage = () => {
         <DialogActions>
           <Button onClick={() => setDeactivateDialog(false)}>Cancel</Button>
           <Button 
-            onClick={handleDeactivateAccount} 
+            onClick={deactivateAccount} 
             color="warning" 
             variant="contained"
             disabled={saving}
@@ -884,7 +822,7 @@ const SettingsPage = () => {
         <DialogActions>
           <Button onClick={() => setDeleteDialog(false)}>Cancel</Button>
           <Button 
-            onClick={handleDeleteAccount} 
+            onClick={deleteAccount} 
             color="error" 
             variant="contained"
             disabled={saving || deleteConfirmation !== 'DELETE'}

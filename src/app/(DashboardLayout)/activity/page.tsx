@@ -29,6 +29,7 @@ import {
 } from '@mui/icons-material';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
+import { authenticatedFetch } from '@/utils/api';
 
 interface LoginEntry {
   timestamp: string;
@@ -57,19 +58,18 @@ const ActivityPage = () => {
   const fetchActivity = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_ENDPOINT}/api/users/activity`, {
-        credentials: 'include',
+      const response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_BACKEND_ENDPOINT}/api/users/activity`, {
+        method: 'GET',
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch activity data');
+      if (response.ok) {
+        const data = await response.json();
+        setActivity(data);
+      } else {
+        setError('Failed to fetch activity data');
       }
-
-      const data = await response.json();
-      setActivity(data);
-    } catch (err) {
-      setError('Failed to load activity data');
-      console.error('Error fetching activity:', err);
+    } catch (error) {
+      setError('Failed to fetch activity data');
     } finally {
       setLoading(false);
     }

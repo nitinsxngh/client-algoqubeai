@@ -106,13 +106,12 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
     
     setIsAnalyzing(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/chatboxes/analyze-colors?url=${encodeURIComponent(url)}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSuggestedColors(data.colors || []);
-      }
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes/analyze-colors?url=${encodeURIComponent(url)}`);
+      if (!response.ok) throw new Error('Failed to analyze website colors');
+      const data = await response.json();
+      setSuggestedColors(data.colors || []);
     } catch (error) {
-      console.error('Error analyzing website colors:', error);
+      setSuggestedColors([]);
     } finally {
       setIsAnalyzing(false);
     }
@@ -143,11 +142,10 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
     setUpdateError(null);
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/chatboxes/${chatbox._id}/configuration`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes/${chatbox._id}/configuration`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ configuration: { [field]: value } }),
+        body: JSON.stringify({ [field]: value }),
       });
 
       if (!response.ok) {
@@ -158,7 +156,7 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
 
       const data = await response.json();
       console.log(`Successfully updated ${field}:`, data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Failed to update ${field}`, err);
       
       let errorMessage = `Failed to update ${field}. Please try again.`;

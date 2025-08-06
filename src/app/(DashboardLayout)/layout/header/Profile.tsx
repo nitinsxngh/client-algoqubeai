@@ -24,6 +24,7 @@ import {
   IconShield,
   IconCreditCard
 } from '@tabler/icons-react';
+import { authenticatedFetch, clearAuth } from '@/utils/api';
 
 const Profile = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -40,14 +41,10 @@ const Profile = () => {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      await fetch(`${API_URL}/api/users/logout`, {
+      await authenticatedFetch(`${API_URL}/api/users/logout`, {
         method: 'POST',
-        credentials: 'include',
       });
-
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-
+      clearAuth();
       window.location.href = '/authentication/login';
     } catch (err) {
       console.error('Logout failed', err);

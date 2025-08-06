@@ -3,6 +3,7 @@ import { Select, MenuItem, Typography, Box, CircularProgress, Alert } from '@mui
 import { useTheme } from '@mui/material/styles';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
 import dynamic from "next/dynamic";
+import { authenticatedFetch } from '@/utils/api';
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
@@ -35,19 +36,8 @@ const TokenUsageOverview = () => {
     setError(null);
 
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem('token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const response = await fetch(`${BACKEND_URL}/api/users/token-usage`, {
-        headers,
-        credentials: 'include',
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/users/token-usage`, {
+        method: 'GET',
       });
 
       if (!response.ok) {
@@ -82,20 +72,8 @@ const TokenUsageOverview = () => {
 
   const fetchConversationData = async (tokenData: TokenUsage) => {
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem('token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      // Fetch user's chatboxes to get conversation data
-      const response = await fetch(`${BACKEND_URL}/api/chatboxes`, {
-        headers,
-        credentials: 'include',
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes`, {
+        method: 'GET',
       });
 
       if (response.ok) {

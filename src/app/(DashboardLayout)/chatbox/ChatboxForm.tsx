@@ -27,6 +27,7 @@ import {
   IconRefresh
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
+import { authenticatedFetch } from '@/utils/api';
 
 type Props = {
   orgName: string;
@@ -164,30 +165,15 @@ const ChatboxForm = ({
     setAnalysisError('');
 
     try {
-      // Use a screenshot service (you can replace with your preferred service)
-      const screenshotUrl = `https://api.apiflash.com/v1/urltoimage?access_key=YOUR_API_KEY&url=${encodeURIComponent(url)}&width=800&height=600&format=jpeg&quality=85`;
-
-      // For demo purposes, we'll use a fallback approach
-      // In production, you'd use a proper screenshot service
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_ENDPOINT}/api/chatboxes/analyze-colors?url=${encodeURIComponent(url)}`);
+      const response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_BACKEND_ENDPOINT}/api/chatboxes/analyze-colors?url=${encodeURIComponent(url)}`, {
+        method: 'GET',
+      });
       
       if (response.ok) {
         const data = await response.json();
         setSuggestedColors(data.colors || []);
       } else {
-        // Fallback: generate colors based on URL hash
-        const hash = url.split('').reduce((a, b) => {
-          a = ((a << 5) - a) + b.charCodeAt(0);
-          return a & a;
-        }, 0);
-
-        const fallbackColors = [
-          `#${Math.abs(hash).toString(16).padStart(6, '0').slice(0, 6)}`,
-          `#${Math.abs(hash + 1000).toString(16).padStart(6, '0').slice(0, 6)}`,
-          `#${Math.abs(hash + 2000).toString(16).padStart(6, '0').slice(0, 6)}`,
-        ];
-
-        setSuggestedColors(fallbackColors);
+        setSuggestedColors([]);
       }
     } catch (error) {
       console.error('Error analyzing website colors:', error);

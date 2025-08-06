@@ -20,6 +20,7 @@ import {
 
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
 import { useEffect, useState } from 'react';
+import { authenticatedFetch } from '@/utils/api';
 
 type ChatboxAnalytics = {
   websiteVisits?: number;
@@ -59,19 +60,8 @@ const ProductPerformance = () => {
 
   const fetchChatboxes = async () => {
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem('token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const userRes = await fetch(`${BACKEND_URL}/api/users/me`, {
-        headers,
-        credentials: 'include',
+      const userRes = await authenticatedFetch(`${BACKEND_URL}/api/users/me`, {
+        method: 'GET',
       });
       
       if (!userRes.ok) {
@@ -81,9 +71,8 @@ const ProductPerformance = () => {
       const userData = await userRes.json();
       const user = userData; // API now returns user object directly
 
-      const chatboxRes = await fetch(`${BACKEND_URL}/api/chatboxes?createdBy=${user._id}`, {
-        headers,
-        credentials: 'include',
+      const chatboxRes = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes?createdBy=${user._id}`, {
+        method: 'GET',
       });
       
       if (!chatboxRes.ok) {

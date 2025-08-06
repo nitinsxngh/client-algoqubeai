@@ -18,6 +18,7 @@ import {
 } from '@tabler/icons-react';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
 import { useEffect, useState } from 'react';
+import { authenticatedFetch } from '@/utils/api';
 
 const Chart = dynamic(() => import('react-apexcharts'), {
   ssr: false,
@@ -42,20 +43,8 @@ const ChatBoxOverview = () => {
   const fetchUserAndChatbox = async () => {
     setLoading(true);
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem('token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const userRes = await fetch(`${BACKEND_URL}/api/users/me`, {
+      const userRes = await authenticatedFetch(`${BACKEND_URL}/api/users/me`, {
         method: 'GET',
-        headers,
-        credentials: 'include',
       });
 
       if (!userRes.ok) {
@@ -65,7 +54,6 @@ const ChatBoxOverview = () => {
       }
 
       const userData = await userRes.json();
-      console.log('User data:', userData);
       setUserId(userData._id);
       
       // Handle different plan data structures
@@ -75,19 +63,13 @@ const ChatBoxOverview = () => {
       } else if (userData.plan) {
         planData = { name: userData.plan.charAt(0).toUpperCase() + userData.plan.slice(1) };
       }
-      console.log('Extracted plan data:', planData);
       setUserPlan(planData);
 
-      const chatboxRes = await fetch(
-        `${BACKEND_URL}/api/chatboxes?createdBy=${userData._id}`,
-        { 
-          headers,
-          credentials: 'include' 
-        }
-      );
+      const chatboxRes = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes?createdBy=${userData._id}`, {
+        method: 'GET',
+      });
 
       const chatboxData = await chatboxRes.json();
-      console.log('Chatbox data:', chatboxData);
       
       // Handle both array and single object responses
       let chatbox = null;
@@ -178,12 +160,8 @@ const ChatBoxOverview = () => {
     try {
       setToggleLoading(true);
 
-      const res = await fetch(`${BACKEND_URL}/api/chatboxes/${chatbox._id}`, {
+      const res = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes/${chatbox._id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({ status: newStatus }),
       });
 
