@@ -41,8 +41,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       return;
     }
 
+    // Get token from localStorage
+    const token = localStorage.getItem('token');
+    
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add Authorization header if token exists
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     fetch(`${backendUrl}/api/users/me`, {
       method: "GET",
+      headers,
       credentials: "include",
     })
       .then((res) => {

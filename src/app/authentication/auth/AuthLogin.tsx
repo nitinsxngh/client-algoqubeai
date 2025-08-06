@@ -105,7 +105,14 @@ const AuthLogin = ({ title, subtitle, subtext }: LoginProps) => {
       const data = await res.json();
 
       if (res.ok) {
+        // Store user data
         localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Store JWT token if it's in the response
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
+        
         router.push('/');
       } else {
         setError(data.message || 'Login failed');
