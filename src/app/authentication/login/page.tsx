@@ -5,6 +5,7 @@ import { Grid, Box, Card, Stack, Typography, Container } from "@mui/material";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
 import AuthLogin from "../auth/AuthLogin";
 
+// Updated login page without animations - deployment test
 const Login2 = () => {
   return (
     <PageContainer title="Login" description="this is Login page">
