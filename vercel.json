@@ -7,7 +7,7 @@
     }
   ],
   "env": {
-    "NEXT_PUBLIC_BACKEND_ENDPOINT": "https://aiapi.algoqubeai.com",
+    "NEXT_PUBLIC_BACKEND_ENDPOINT": "https://aiapi.algoqube.com",
     "NEXT_PUBLIC_FRONTEND_URL": "https://client-algoqubeai.vercel.app"
   },
   "headers": [
