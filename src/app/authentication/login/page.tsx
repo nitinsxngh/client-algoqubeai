@@ -1,9 +1,8 @@
 "use client";
 import Link from "next/link";
-import { Grid, Box, Card, Stack, Typography } from "@mui/material";
+import { Grid, Box, Card, Stack, Typography, Container } from "@mui/material";
 // components
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
-import Logo from "@/app/(DashboardLayout)/layout/shared/logo/Logo";
 import AuthLogin from "../auth/AuthLogin";
 
 const Login2 = () => {
@@ -11,86 +10,103 @@ const Login2 = () => {
     <PageContainer title="Login" description="this is Login page">
       <Box
         sx={{
-          position: "relative",
-          "&:before": {
-            content: '""',
-            background: "radial-gradient(#d2f1df, #d3d7fa, #bad8f4)",
-            backgroundSize: "400% 400%",
-            animation: "gradient 15s ease infinite",
-            position: "absolute",
-            height: "100%",
-            width: "100%",
-            opacity: "0.3",
-          },
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          position: 'relative',
         }}
       >
-        <Grid
-          container
-          spacing={0}
-          justifyContent="center"
-          sx={{ height: "100vh" }}
-        >
+
+        <Container maxWidth="lg" sx={{ height: '100vh', position: 'relative', zIndex: 1 }}>
           <Grid
-            display="flex"
+            container
+            spacing={0}
             justifyContent="center"
             alignItems="center"
-            size={{
-              xs: 12,
-              sm: 12,
-              lg: 4,
-              xl: 3
-            }}>
-            <Card
-              elevation={9}
-              sx={{ p: 4, zIndex: 1, width: "100%", maxWidth: "500px" }}
+            sx={{ height: "100vh" }}
+          >
+            <Grid
+              size={{
+                xs: 12,
+                sm: 12,
+                lg: 5,
+                xl: 4
+              }}
             >
-              <Box display="flex" alignItems="center" justifyContent="center">
-                <Logo />
-              </Box>
-              <AuthLogin
-                subtext={
-                  <Typography
-                    variant="subtitle1"
-                    textAlign="center"
-                    color="textSecondary"
-                    mb={1}
-                  >
-                    Reimagine your journey
-                  </Typography>
-                }
-                subtitle={
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    justifyContent="center"
-                    mt={3}
-                  >
-                    <Typography
-                      color="textSecondary"
-                      variant="h6"
-                      fontWeight="500"
-                    >
-                      New to Algoqube?
-                    </Typography>
-                    <Typography
-                      component={Link}
-                      href="/authentication/register"
-                      fontWeight="500"
-                      sx={{
-                        textDecoration: "none",
-                        color: "primary.main",
-                      }}
-                    >
-                      Create an account
-                    </Typography>
-                  </Stack>
-                }
-              />
-            </Card>
+                <Card
+                  elevation={24}
+                  sx={{
+                    p: 5,
+                    borderRadius: 4,
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.15)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '4px',
+                      background: 'linear-gradient(90deg, #667eea, #764ba2)',
+                    },
+                  }}
+                >
+                  <AuthLogin
+                    title="Welcome back"
+                    subtext={
+                      <Typography
+                        variant="body1"
+                        textAlign="center"
+                        color="text.secondary"
+                        mb={3}
+                        sx={{ fontSize: '1.1rem' }}
+                      >
+                        Sign in to continue to your AI-powered dashboard
+                      </Typography>
+                    }
+                    subtitle={
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        justifyContent="center"
+                        mt={4}
+                        pt={3}
+                        sx={{ borderTop: '1px solid rgba(0, 0, 0, 0.08)' }}
+                      >
+                        <Typography
+                          color="text.secondary"
+                          variant="body1"
+                          fontWeight="500"
+                        >
+                          Don't have an account?
+                        </Typography>
+                        <Typography
+                          component={Link}
+                          href="/authentication/register"
+                          fontWeight="600"
+                          sx={{
+                            textDecoration: "none",
+                            color: "primary.main",
+                            '&:hover': {
+                              textDecoration: 'underline',
+                            },
+                          }}
+                        >
+                          Sign up
+                        </Typography>
+                      </Stack>
+                    }
+                  />
+                </Card>
+            </Grid>
           </Grid>
-        </Grid>
+        </Container>
       </Box>
     </PageContainer>
   );
 };
+
 export default Login2;

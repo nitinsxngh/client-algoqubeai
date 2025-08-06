@@ -1,117 +1,402 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
-import { useTheme } from '@mui/material/styles';
-import { Box, Stack, Typography, Avatar } from '@mui/material';
-import { IconArrowUpLeft } from '@tabler/icons-react';
-import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  Paper,
+  Stack,
+  LinearProgress,
+  Chip,
+  Avatar,
+  Button,
+  Alert,
+  CircularProgress,
+  IconButton,
+  Tooltip,
+} from '@mui/material';
+import {
+  Token as TokenIcon,
+  TrendingUp as TrendingUpIcon,
+  Warning as WarningIcon,
+  CheckCircle as CheckCircleIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
+import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
-const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
+interface TokenUsage {
+  tokens: {
+    allocated: number;
+    used: number;
+    remaining: number;
+  };
+  plan: string;
+  planDetails: any;
+  usagePercentage: number;
+}
 
-const YearlyBreakup = () => {
-  const theme = useTheme();
-  const primary = theme.palette.primary.main;
-  const primarylight = '#ecf2ff';
-  const successlight = theme.palette.success.light;
+const TokenUsageOverview = () => {
+  const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-  const [tokenUsed, setTokenUsed] = useState(0);
-  const [tokenRemaining, setTokenRemaining] = useState(0);
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT!;
 
-  useEffect(() => {
-    // Simulated API data
-    setTimeout(() => {
-      setTokenUsed(3200);
-      setTokenRemaining(1800);
-    }, 300);
-  }, []);
-
-  const total = tokenUsed + tokenRemaining;
-  const usagePercent = total > 0 ? ((tokenUsed / total) * 100).toFixed(1) : '0';
-
-  const chartOptions: any = {
-    chart: {
-      type: 'donut',
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
-      foreColor: '#adb0bb',
-      toolbar: { show: false },
-      height: 155,
-    },
-    colors: [primary, primarylight],
-    plotOptions: {
-      pie: {
-        donut: {
-          size: '75%',
-          background: 'transparent',
-        },
-      },
-    },
-    tooltip: {
-      theme: theme.palette.mode === 'dark' ? 'dark' : 'light',
-      fillSeriesColor: false,
-    },
-    stroke: { show: false },
-    dataLabels: { enabled: false },
-    legend: { show: false },
+  const fetchTokenUsage = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      }
+      
+      const response = await fetch(`${BACKEND_URL}/api/users/token-usage`, {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Token usage data received:', data); // Debug log
+        setTokenUsage(data);
+        setError(null);
+      } else {
+        console.error('Token usage fetch failed:', response.status, response.statusText);
+        setError('Failed to fetch token usage');
+      }
+    } catch (error) {
+      console.error('Error fetching token usage:', error);
+      setError('Failed to fetch token usage');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
-  const chartSeries = [tokenUsed, tokenRemaining];
+  useEffect(() => {
+    fetchTokenUsage();
+    
+    // Set up periodic refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchTokenUsage(true);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [BACKEND_URL]);
+
+  const handleRefresh = () => {
+    fetchTokenUsage(true);
+  };
+
+  const handleInitializeTokens = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/users/initialize-tokens`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Tokens initialized:', data);
+        fetchTokenUsage(true); // Refresh the data
+      } else {
+        console.error('Failed to initialize tokens');
+      }
+    } catch (error) {
+      console.error('Error initializing tokens:', error);
+    }
+  };
+
+  const handleTestTokenConsumption = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/users/test-token-consumption`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ amount: 5 }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Test token consumption:', data);
+        fetchTokenUsage(true); // Refresh the data
+      } else {
+        console.error('Failed to test token consumption');
+      }
+    } catch (error) {
+      console.error('Error testing token consumption:', error);
+    }
+  };
+
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('en-IN').format(num);
+  };
+
+  const getUsageColor = (percentage: number) => {
+    if (percentage >= 90) return 'error';
+    if (percentage >= 75) return 'warning';
+    return 'success';
+  };
+
+  const getUsageMessage = (percentage: number) => {
+    if (percentage >= 90) return 'Critical: Almost out of tokens!';
+    if (percentage >= 75) return 'Warning: Consider upgrading your plan';
+    return 'Good: Plenty of tokens remaining';
+  };
+
+  if (loading) {
+    return (
+      <Paper
+        elevation={0}
+        sx={{
+          p: 3,
+          borderRadius: 4,
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          border: '1px solid rgba(0, 0, 0, 0.06)',
+        }}
+      >
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+          <CircularProgress />
+        </Box>
+      </Paper>
+    );
+  }
+
+  if (error || !tokenUsage) {
+    return (
+      <Paper
+        elevation={0}
+        sx={{
+          p: 3,
+          borderRadius: 4,
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          border: '1px solid rgba(0, 0, 0, 0.06)',
+        }}
+      >
+        <Alert severity="error">
+          {error || 'Unable to load token usage information'}
+        </Alert>
+        <Box mt={2}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleInitializeTokens}
+            sx={{ textTransform: 'none', mr: 1 }}
+          >
+            Initialize Tokens
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleTestTokenConsumption}
+            sx={{ textTransform: 'none' }}
+          >
+            Test Consumption (5 tokens)
+          </Button>
+        </Box>
+      </Paper>
+    );
+  }
+
+  // Ensure token values are numbers, fallback to 0 if null/undefined
+  const tokens = {
+    allocated: tokenUsage.tokens?.allocated || 0,
+    used: tokenUsage.tokens?.used || 0,
+    remaining: tokenUsage.tokens?.remaining || 0
+  };
+
+  const usageColor = getUsageColor(tokenUsage.usagePercentage);
+  const usageMessage = getUsageMessage(tokenUsage.usagePercentage);
 
   return (
-    <DashboardCard title="Token Usage">
-      <Box
-        display="flex"
-        flexDirection={{ xs: 'column', md: 'row' }}
-        justifyContent="space-between"
-        alignItems="flex-start"
-        gap={4}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+    >
+      <Paper
+        elevation={0}
+        sx={{
+          p: 3,
+          borderRadius: 4,
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          border: '1px solid rgba(0, 0, 0, 0.06)',
+        }}
       >
-        {/* Left Section: Text and Stats */}
-        <Box flex={1}>
-          <Typography variant="h5" fontWeight="700">
-            {tokenUsed} / {total} tokens used
-          </Typography>
-          <Stack direction="row" spacing={1} mt={1} alignItems="center">
-            <Avatar sx={{ bgcolor: successlight, width: 27, height: 27 }}>
-              <IconArrowUpLeft width={20} color="#39B69A" />
-            </Avatar>
-            <Typography variant="subtitle2" fontWeight="600">
-              {usagePercent}%
+        {/* Header */}
+        <Stack direction="row" alignItems="center" spacing={2} mb={3}>
+          <Avatar
+            sx={{
+              width: 48,
+              height: 48,
+              bgcolor: 'primary.main',
+              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+            }}
+          >
+            <TokenIcon />
+          </Avatar>
+          <Box flex={1}>
+            <Typography variant="h6" fontWeight="600">
+              Token Usage Overview
             </Typography>
-            <Typography variant="subtitle2" color="textSecondary">
-              used
+            <Typography variant="body2" color="text.secondary">
+              {tokenUsage.planDetails?.name || 'Free'} Plan
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1}>
+            <Tooltip title="Refresh token usage">
+              <IconButton
+                onClick={handleRefresh}
+                disabled={refreshing}
+                size="small"
+                sx={{
+                  bgcolor: 'background.paper',
+                  '&:hover': { bgcolor: 'background.paper' },
+                }}
+              >
+                <RefreshIcon 
+                  sx={{ 
+                    fontSize: 18,
+                    animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                    '@keyframes spin': {
+                      '0%': { transform: 'rotate(0deg)' },
+                      '100%': { transform: 'rotate(360deg)' },
+                    },
+                  }} 
+                />
+              </IconButton>
+            </Tooltip>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => router.push('/plan')}
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+              }}
+            >
+              Manage Plan
+            </Button>
+          </Stack>
+        </Stack>
+
+        {/* Usage Progress */}
+        <Box mb={3}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+            <Typography variant="body2" fontWeight="500">
+              Usage Progress
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {formatNumber(tokens.used)} / {formatNumber(tokens.allocated)}
             </Typography>
           </Stack>
-
-          <Stack spacing={3} mt={5} direction="row">
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Avatar sx={{ width: 9, height: 9, bgcolor: primary }} />
-              <Typography variant="subtitle2" color="textSecondary">
-                Used
-              </Typography>
-            </Stack>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Avatar sx={{ width: 9, height: 9, bgcolor: primarylight }} />
-              <Typography variant="subtitle2" color="textSecondary">
-                Remaining
-              </Typography>
-            </Stack>
-          </Stack>
-        </Box>
-
-        {/* Right Section: Donut Chart */}
-        <Box width={{ xs: '100%', md: 180 }}>
-          <Chart
-            options={chartOptions}
-            series={chartSeries}
-            type="donut"
-            height={150}
-            width="100%"
+          <LinearProgress
+            variant="determinate"
+            value={tokenUsage.usagePercentage}
+            color={usageColor}
+            sx={{
+              height: 8,
+              borderRadius: 4,
+              bgcolor: 'rgba(0, 0, 0, 0.1)',
+              '& .MuiLinearProgress-bar': {
+                borderRadius: 4,
+              },
+            }}
           />
         </Box>
-      </Box>
-    </DashboardCard>
+
+        {/* Usage Stats */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+            gap: 2,
+            mb: 3,
+          }}
+        >
+          <Box textAlign="center">
+            <Typography variant="h4" fontWeight="700" color="primary.main">
+              {formatNumber(tokens.allocated)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Total Allocated
+            </Typography>
+          </Box>
+          <Box textAlign="center">
+            <Typography variant="h4" fontWeight="700" color="warning.main">
+              {formatNumber(tokens.used)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Used
+            </Typography>
+          </Box>
+          <Box textAlign="center">
+            <Typography variant="h4" fontWeight="700" color="success.main">
+              {formatNumber(tokens.remaining)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Remaining
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Status Alert */}
+        <Alert
+          severity={usageColor}
+          icon={
+            usageColor === 'error' ? <WarningIcon /> :
+            usageColor === 'warning' ? <TrendingUpIcon /> :
+            <CheckCircleIcon />
+          }
+          sx={{
+            borderRadius: 2,
+            '& .MuiAlert-message': {
+              fontWeight: 500,
+            },
+          }}
+        >
+          {usageMessage}
+          {tokenUsage.usagePercentage >= 75 && (
+            <Button
+              size="small"
+              sx={{ ml: 2, textTransform: 'none' }}
+              onClick={() => router.push('/plan')}
+            >
+              Upgrade Plan
+            </Button>
+          )}
+        </Alert>
+
+        {/* Plan Details */}
+        {tokenUsage.planDetails && (
+          <Box mt={3} p={2} bgcolor="rgba(0, 0, 0, 0.02)" borderRadius={2}>
+            <Typography variant="body2" fontWeight="500" mb={1}>
+              Plan Details
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Chip
+                label={`${tokenUsage.planDetails.name} Plan`}
+                size="small"
+                color="primary"
+                variant="outlined"
+              />
+              <Chip
+                label={`₹${tokenUsage.planDetails.price}/month`}
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                label={`${formatNumber(tokenUsage.planDetails.tokenLimit)} tokens`}
+                size="small"
+                variant="outlined"
+              />
+            </Stack>
+          </Box>
+        )}
+      </Paper>
+    </motion.div>
   );
 };
 
-export default YearlyBreakup;
+export default TokenUsageOverview;

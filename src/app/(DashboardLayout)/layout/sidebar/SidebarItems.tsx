@@ -1,6 +1,6 @@
 import React from "react";
 import Menuitems from "./MenuItems";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Avatar, Chip, Divider } from "@mui/material";
 import {
   Logo,
   Sidebar as MUI_Sidebar,
@@ -8,10 +8,10 @@ import {
   MenuItem,
   Submenu,
 } from "react-mui-sidebar";
-import { IconPoint } from '@tabler/icons-react';
+import { IconPoint, IconBrain, IconSparkles } from '@tabler/icons-react';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Upgrade } from "./Updrade";
+
 
 
 const renderMenuItems = (items: any, pathDirect: any) => {
@@ -76,20 +76,111 @@ const SidebarItems = () => {
       <MUI_Sidebar
         width={"100%"}
         showProfile={false}
-        themeColor={"#5D87FF"}
-        themeSecondaryColor={"#49beff"}
+        themeColor={"#6366f1"}
+        themeSecondaryColor={"#8b5cf6"}
       >
-        {/* Logo with spacing */}
-        <Box px={3} py={2}>
-          <Typography variant="h4" fontWeight={600}>
-            AlgoqubeAI
-          </Typography>
+        {/* Enhanced Logo Section */}
+        <Box 
+          sx={{ 
+            p: 3, 
+            pb: 2,
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.04)'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar
+              sx={{
+                width: 36,
+                height: 36,
+                bgcolor: 'primary.main',
+                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
+              }}
+            >
+              <IconBrain size={18} />
+            </Avatar>
+            <Box>
+              <Typography variant="h5" fontWeight={700} sx={{ color: 'text.primary' }}>
+                AlgoqubeAI
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                AI Chatbot Platform
+              </Typography>
+            </Box>
+          </Box>
         </Box>
 
-        {renderMenuItems(Menuitems, pathDirect)}
+        {/* Menu Items with better spacing */}
+        <Box sx={{ flex: 1, py: 1 }}>
+          {renderMenuItems(Menuitems, pathDirect)}
+        </Box>
 
-        <Box px={2}>
-          <Upgrade />
+        {/* Professional Bottom Section */}
+        <Box sx={{ mt: 'auto', p: 2 }}>
+          <Divider sx={{ mb: 2, opacity: 0.1 }} />
+          
+          {/* AI Status Indicator */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 2, 
+            p: 2, 
+            borderRadius: 2,
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)',
+            border: '1px solid rgba(99, 102, 241, 0.1)',
+            mb: 2
+          }}>
+            <Avatar
+              sx={{
+                width: 32,
+                height: 32,
+                bgcolor: 'primary.main',
+                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
+              }}
+            >
+              <IconBrain size={16} />
+            </Avatar>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                AI Assistant
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                Powered by GPT-4
+              </Typography>
+            </Box>
+            <Chip
+              label="Online"
+              size="small"
+              sx={{
+                bgcolor: 'success.light',
+                color: 'success.contrastText',
+                fontSize: '0.625rem',
+                height: 20,
+                '& .MuiChip-label': { px: 1 }
+              }}
+            />
+          </Box>
+
+          {/* Version Info */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            p: 1.5,
+            borderRadius: 1.5,
+            background: 'rgba(0, 0, 0, 0.02)',
+            border: '1px solid rgba(0, 0, 0, 0.04)'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <IconSparkles size={14} color="#6366f1" />
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                v2.1.0
+              </Typography>
+            </Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              Beta
+            </Typography>
+          </Box>
         </Box>
       </MUI_Sidebar>
     </>

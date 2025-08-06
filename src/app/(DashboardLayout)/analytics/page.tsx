@@ -18,7 +18,7 @@ const AnalyticsPage = () => {
         <TokenUsageOverview />
       </Box>
 
-      {/* Chatbox Performance - Custom Box layout */}
+      {/* Chatbox Performance - Flexible Grid Layout */}
       <Stack
         direction={isMobile ? 'column' : 'row'}
         spacing={3}
@@ -30,8 +30,8 @@ const AnalyticsPage = () => {
           <ProductPerformance />
         </Box>
 
-        {/* You can add more boxes here in the same layout */}
-        {/* <Box flex={1} minWidth={300}>Another Component</Box> */}
+        {/* Placeholder for future analytics cards */}
+        {/* <Box flex={1} minWidth={300}>AnotherAnalyticsCard</Box> */}
       </Stack>
     </PageContainer>
   );

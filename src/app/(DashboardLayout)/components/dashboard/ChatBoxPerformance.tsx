@@ -8,31 +8,156 @@ import {
   Avatar,
   Stack,
   useTheme,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
-  AccessTime as AccessTimeIcon,
   ChatBubbleOutline as ChatIcon,
   ForumOutlined as ForumIcon,
   Timelapse as TimelapseIcon,
 } from '@mui/icons-material';
 
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
+import { useEffect, useState } from 'react';
+
+type ChatboxAnalytics = {
+  websiteVisits?: number;
+  avgSessionTime?: number;
+  conversationsInitiated?: number;
+  totalConversations?: number;
+  avgConversationTime?: number;
+  lastUpdated?: string;
+};
+
+type Chatbox = {
+  _id: string;
+  name: string;
+  organizationName: string;
+  analytics?: ChatboxAnalytics;
+};
 
 const ProductPerformance = () => {
   const theme = useTheme();
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT!;
+  const [chatboxes, setChatboxes] = useState<Chatbox[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Dummy data
+  const formatTime = (seconds: number): string => {
+    if (!seconds || seconds <= 0) return '00:00';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const fetchChatboxes = async () => {
+    try {
+      const userRes = await fetch(`${BACKEND_URL}/api/users/me`, {
+        credentials: 'include',
+      });
+      
+      if (!userRes.ok) {
+        throw new Error('Failed to fetch user data');
+      }
+      
+      const userData = await userRes.json();
+      const user = userData; // API now returns user object directly
+
+      const chatboxRes = await fetch(`${BACKEND_URL}/api/chatboxes?createdBy=${user._id}`, {
+        credentials: 'include',
+      });
+      
+      if (!chatboxRes.ok) {
+        throw new Error('Failed to fetch chatbox data');
+      }
+      
+      const chatboxData = await chatboxRes.json();
+      setChatboxes(Array.isArray(chatboxData) ? chatboxData : [chatboxData]);
+    } catch (err) {
+      console.error('Error fetching chatbox analytics:', err);
+      setError('Failed to load chatbots. Please try again later.');
+      setChatboxes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchChatboxes();
+  }, []);
+
+  if (loading) {
+    return (
+      <DashboardCard title="Bot Analytics Overview">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+          <CircularProgress />
+        </Box>
+      </DashboardCard>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardCard title="Bot Analytics Overview">
+        <Alert severity="error">
+          {error}
+        </Alert>
+      </DashboardCard>
+    );
+  }
+
+  // If no chatboxes, show empty state
+  if (!chatboxes || chatboxes.length === 0) {
+    return (
+      <DashboardCard title="Bot Analytics Overview">
+        <Box textAlign="center" py={4}>
+          <Typography variant="body1" color="text.secondary" mb={2}>
+            No chatbots found
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Create your first chatbot to see analytics here
+          </Typography>
+        </Box>
+      </DashboardCard>
+    );
+  }
+
+  // Aggregate analytics from all chatboxes
+  const aggregatedAnalytics = chatboxes.reduce((acc, chatbox) => {
+    // Skip null or undefined chatboxes
+    if (!chatbox) return acc;
+    
+    const analytics = chatbox.analytics || {};
+    return {
+      websiteVisits: (acc.websiteVisits || 0) + (analytics.websiteVisits || 0),
+      conversationsInitiated: (acc.conversationsInitiated || 0) + (analytics.conversationsInitiated || 0),
+      totalConversations: (acc.totalConversations || 0) + (analytics.totalConversations || 0),
+      avgConversationTime: (acc.avgConversationTime || 0) + (analytics.avgConversationTime || 0),
+    };
+  }, {
+    websiteVisits: 0,
+    conversationsInitiated: 0,
+    totalConversations: 0,
+    avgConversationTime: 0,
+  });
+
+  // Calculate average conversation time across all chatboxes
+  const avgConversationTime = chatboxes.length > 0 
+    ? Math.round(aggregatedAnalytics.avgConversationTime / chatboxes.length) 
+    : 0;
+
   const data = {
-    website_visits: 1200,
-    avg_session_time: '00:03:24',
-    conversations_initiated: 400,
-    total_conversations: 950,
-    conversation_session_time: {
-      min: '00:01:10',
-      max: '00:07:20',
-      average: '00:03:24',
-    },
+    website_visits: aggregatedAnalytics.websiteVisits || 0,
+    conversations_initiated: aggregatedAnalytics.conversationsInitiated || 0,
+    total_conversations: aggregatedAnalytics.totalConversations || 0,
+    avg_conversation_time: `${avgConversationTime}s`,
   };
 
   const card = (
@@ -48,7 +173,7 @@ const ProductPerformance = () => {
         minWidth: 220,
         flex: 1,
         boxShadow: 'none',
-        bgcolor: index < 4 ? theme.palette.background.default : 'transparent',
+        bgcolor: index < 3 ? theme.palette.background.default : 'transparent',
       }}
     >
       <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -72,15 +197,12 @@ const ProductPerformance = () => {
 
   return (
     <DashboardCard title="Bot Analytics Overview">
-      {/* Row 1 with background color, no shadow */}
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap mb={3}>
         {card(<TrendingUpIcon />, 'Website Visits', data.website_visits, 0)}
-        {card(<AccessTimeIcon />, 'Avg. Session Time', data.avg_session_time, 1)}
-        {card(<ChatIcon />, 'Conversations Initiated', data.conversations_initiated, 2)}
-        {card(<ForumIcon />, 'Total Conversations', data.total_conversations, 3)}
+        {card(<ChatIcon />, 'Conversations Initiated', data.conversations_initiated, 1)}
+        {card(<ForumIcon />, 'Total Conversations', data.total_conversations, 2)}
       </Stack>
 
-      {/* Session Time Summary */}
       <Card elevation={0} sx={{ boxShadow: 'none' }}>
         <CardContent>
           <Box display="flex" alignItems="center" gap={2} mb={2}>
@@ -94,22 +216,9 @@ const ProductPerformance = () => {
             >
               <TimelapseIcon />
             </Avatar>
-            <Typography variant="subtitle2">Conversation Session Time</Typography>
+            <Typography variant="subtitle2">Average Conversation Time</Typography>
           </Box>
-          <Stack direction="row" spacing={4}>
-            <Box>
-              <Typography variant="body2" color="textSecondary">Min</Typography>
-              <Typography variant="h6">{data.conversation_session_time.min}</Typography>
-            </Box>
-            <Box>
-              <Typography variant="body2" color="textSecondary">Average</Typography>
-              <Typography variant="h6">{data.conversation_session_time.average}</Typography>
-            </Box>
-            <Box>
-              <Typography variant="body2" color="textSecondary">Max</Typography>
-              <Typography variant="h6">{data.conversation_session_time.max}</Typography>
-            </Box>
-          </Stack>
+          <Typography variant="h6">{data.avg_conversation_time}</Typography>
         </CardContent>
       </Card>
     </DashboardCard>

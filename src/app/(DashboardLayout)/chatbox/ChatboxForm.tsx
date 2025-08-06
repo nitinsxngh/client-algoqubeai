@@ -15,7 +15,18 @@ import {
   FormControlLabel,
   Switch,
   CircularProgress,
+  Chip,
+  Avatar,
+  Tooltip,
+  Alert,
 } from '@mui/material';
+import {
+  IconPlus,
+  IconPalette,
+  IconEye,
+  IconRefresh
+} from '@tabler/icons-react';
+import { motion } from 'framer-motion';
 
 type Props = {
   orgName: string;
@@ -33,6 +44,12 @@ type Props = {
   allowAutoScrape: boolean;
   setAllowAutoScrape: (val: boolean) => void;
   isSaving: boolean; // ✅ Loader prop
+  themeColor: string;
+  setThemeColor: (val: string) => void;
+  // Scraping props
+  isScraping: boolean;
+  scrapeStatus: string;
+  onScrapeWebsite: (url: string) => Promise<string>;
 };
 
 const ChatboxForm = ({
@@ -51,6 +68,11 @@ const ChatboxForm = ({
   allowAutoScrape,
   setAllowAutoScrape,
   isSaving,
+  themeColor,
+  setThemeColor,
+  isScraping,
+  scrapeStatus,
+  onScrapeWebsite,
 }: Props) => {
   const [errors, setErrors] = useState({
     orgName: '',
@@ -65,6 +87,11 @@ const ChatboxForm = ({
     domainUrl: false,
     customContent: false,
   });
+
+  const [suggestedColors, setSuggestedColors] = useState<string[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState('');
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
   const getWordCount = (text: string) =>
     text.trim().split(/\s+/).filter(Boolean).length;
@@ -97,6 +124,103 @@ const ChatboxForm = ({
     return newErrors;
   };
 
+  // Function to extract colors from image data
+  const extractColorsFromImage = (imageData: ImageData): string[] => {
+    const data = imageData.data;
+    const colors: { [key: string]: number } = {};
+
+    // Sample pixels (every 10th pixel to improve performance)
+    for (let i = 0; i < data.length; i += 40) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      // Skip white, black, and very light/dark colors
+      const brightness = (r + g + b) / 3;
+      if (brightness < 30 || brightness > 225) continue;
+
+      // Create color key with reduced precision for grouping similar colors
+      const colorKey = `${Math.floor(r / 10) * 10},${Math.floor(g / 10) * 10},${Math.floor(b / 10) * 10}`;
+      colors[colorKey] = (colors[colorKey] || 0) + 1;
+    }
+
+    // Sort by frequency and convert to hex
+    const sortedColors = Object.entries(colors)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([colorKey]) => {
+        const [r, g, b] = colorKey.split(',').map(Number);
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+      });
+
+    return sortedColors;
+  };
+
+  // Function to analyze website colors
+  const analyzeWebsiteColors = async (url: string) => {
+    if (!url) return;
+
+    setIsAnalyzing(true);
+    setAnalysisError('');
+
+    try {
+      // Use a screenshot service (you can replace with your preferred service)
+      const screenshotUrl = `https://api.apiflash.com/v1/urltoimage?access_key=YOUR_API_KEY&url=${encodeURIComponent(url)}&width=800&height=600&format=jpeg&quality=85`;
+
+      // For demo purposes, we'll use a fallback approach
+      // In production, you'd use a proper screenshot service
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_ENDPOINT}/api/chatboxes/analyze-colors?url=${encodeURIComponent(url)}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSuggestedColors(data.colors || []);
+      } else {
+        // Fallback: generate colors based on URL hash
+        const hash = url.split('').reduce((a, b) => {
+          a = ((a << 5) - a) + b.charCodeAt(0);
+          return a & a;
+        }, 0);
+
+        const fallbackColors = [
+          `#${Math.abs(hash).toString(16).padStart(6, '0').slice(0, 6)}`,
+          `#${Math.abs(hash + 1000).toString(16).padStart(6, '0').slice(0, 6)}`,
+          `#${Math.abs(hash + 2000).toString(16).padStart(6, '0').slice(0, 6)}`,
+        ];
+
+        setSuggestedColors(fallbackColors);
+      }
+    } catch (error) {
+      console.error('Error analyzing website colors:', error);
+      setAnalysisError('Could not analyze website colors. Using default suggestions.');
+
+      // Default color suggestions
+      setSuggestedColors(['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b']);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Analyze colors when domain URL changes
+  useEffect(() => {
+    if (domainUrl && domainUrl.includes('.')) {
+      const timeoutId = setTimeout(() => {
+        analyzeWebsiteColors(domainUrl);
+      }, 1000); // Debounce for 1 second
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [domainUrl]);
+
+  // Set initial theme color when suggested colors are loaded
+  useEffect(() => {
+    if (suggestedColors.length > 0 && !selectedColor) {
+      const firstColor = suggestedColors[0];
+      setSelectedColor(firstColor);
+      setThemeColor(firstColor);
+    }
+  }, [suggestedColors, selectedColor, setThemeColor]);
+
+
   useEffect(() => {
     validate();
   }, [orgName, category, domainUrl, customContent, touched]);
@@ -117,13 +241,20 @@ const ChatboxForm = ({
   };
 
   return (
-    <Box maxWidth={600} width="100%" mx="auto">
-      <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
-        <Typography variant="h6" mb={3}>
-          {isEditing ? 'Edit Chatbot' : 'Create Chatbot'}
-        </Typography>
+    <Box maxWidth={800} width="100%" mx="auto">
+      <Stack spacing={4}>
+        {/* Basic Information Section */}
+        <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid rgba(0,0,0,0.06)' }}>
+          <Stack direction="row" alignItems="center" spacing={2} mb={3}>
+            <Avatar sx={{ width: 32, height: 32, bgcolor: '#6366f1' }}>
+              📋
+            </Avatar>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Basic Information
+            </Typography>
+          </Stack>
 
-        <Stack spacing={2} mb={3}>
+          <Stack spacing={3}>
           <TextField
             label="Organization Name"
             fullWidth
@@ -170,6 +301,14 @@ const ChatboxForm = ({
                 label="Allow Auto Scrape"
               />
             </Stack>
+            
+            {allowAutoScrape && (
+              <Alert severity="info" sx={{ mt: 1, borderRadius: 2 }}>
+                <Typography variant="body2">
+                  <strong>Auto-scraping enabled!</strong> When you save, the system will automatically scrape content from the website and populate the content field. You can still manually edit the content if needed.
+                </Typography>
+              </Alert>
+            )}
 
             <TextField
               label="Domain URL"
@@ -181,7 +320,117 @@ const ChatboxForm = ({
               error={!!errors.domainUrl}
               helperText={errors.domainUrl}
             />
+
+            {/* Scraping Button and Status */}
+            {domainUrl && !isEditing && (
+              <Box sx={{ mt: 2 }}>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={async () => {
+                      if (domainUrl) {
+                        const scrapedContent = await onScrapeWebsite(domainUrl);
+                        if (scrapedContent) {
+                          setCustomContent(scrapedContent);
+                        }
+                      }
+                    }}
+                    disabled={isScraping || !domainUrl.trim()}
+                    startIcon={isScraping ? <CircularProgress size={16} /> : <IconRefresh size={16} />}
+                    sx={{ minWidth: 120 }}
+                  >
+                    {isScraping ? 'Scraping...' : 'Scrape Content'}
+                  </Button>
+                  
+                  {scrapeStatus && (
+                    <Typography 
+                      variant="caption" 
+                      color={scrapeStatus.includes('✅') ? 'success.main' : scrapeStatus.includes('❌') ? 'error.main' : 'text.secondary'}
+                      sx={{ 
+                        flex: 1,
+                        fontStyle: scrapeStatus.includes('✅') || scrapeStatus.includes('❌') ? 'normal' : 'italic'
+                      }}
+                    >
+                      {scrapeStatus}
+                    </Typography>
+                  )}
+                </Stack>
+              </Box>
+            )}
           </Box>
+
+          {/* Color Suggestions */}
+          {suggestedColors.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Box sx={{ mt: 2 }}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                  <IconPalette size={16} color="#6366f1" />
+                  <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
+                    Suggested Colors from Website
+                  </Typography>
+                  {isAnalyzing && <CircularProgress size={14} />}
+                </Stack>
+
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {suggestedColors.map((color, index) => (
+                    <Tooltip key={color} title={`Click to use ${color}`}>
+                      <Box
+                        onClick={() => {
+                          setSelectedColor(color);
+                          setThemeColor(color);
+                        }}
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 2,
+                          bgcolor: color,
+                          cursor: 'pointer',
+                          border: selectedColor === color ? '3px solid white' : '2px solid transparent',
+                          boxShadow: selectedColor === color 
+                            ? `0 0 0 2px ${color}, 0 4px 12px ${color}40`
+                            : '0 2px 8px rgba(0,0,0,0.1)',
+                          transition: 'all 0.2s',
+                          '&:hover': {
+                            transform: 'scale(1.1)',
+                            boxShadow: `0 4px 16px ${color}40`,
+                          },
+                        }}
+                      />
+                    </Tooltip>
+                  ))}
+                </Stack>
+
+                {/* Theme Color Display */}
+                {selectedColor && (
+                  <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 500, mb: 1 }}>
+                      Selected Theme Color: {selectedColor}
+                    </Typography>
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: 40,
+                        borderRadius: 2,
+                        bgcolor: selectedColor,
+                        border: '2px solid rgba(0,0,0,0.1)',
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {analysisError && (
+                  <Alert severity="info" sx={{ mt: 1, borderRadius: 2 }}>
+                    {analysisError}
+                  </Alert>
+                )}
+              </Box>
+            </motion.div>
+          )}
 
           <Button variant="outlined" component="label">
             Upload File
@@ -204,23 +453,36 @@ const ChatboxForm = ({
             onChange={(e) => setCustomContent(e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, customContent: true }))}
             error={!!errors.customContent}
-            helperText={errors.customContent}
+            helperText={
+              errors.customContent || 
+              (customContent && `Content length: ${customContent.length} characters (${Math.ceil(customContent.length / 5)} words)`)
+            }
           />
-        </Stack>
-
-        <Stack direction="row" justifyContent="flex-end" spacing={2}>
-          <Button onClick={onCancel} disabled={isSaving}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={onSubmit}
-            disabled={isSaving || Object.values(errors).some((e) => e)}
-            startIcon={isSaving && <CircularProgress size={16} />}
-          >
-            {isSaving ? 'Saving...' : 'Save'}
-          </Button>
+          
+          {customContent && customContent.includes('Content scraped from:') && (
+            <Alert severity="success" sx={{ mt: 1, borderRadius: 2 }}>
+              <Typography variant="body2">
+                <strong>✅ Content successfully scraped!</strong> The content above was automatically extracted from the website. You can edit it manually if needed.
+              </Typography>
+            </Alert>
+          )}
         </Stack>
       </Paper>
-    </Box>
+
+      {/* Action Buttons */}
+      <Stack direction="row" justifyContent="flex-end" spacing={2}>
+        <Button onClick={onCancel} disabled={isSaving}>Cancel</Button>
+        <Button
+          variant="contained"
+          onClick={onSubmit}
+          disabled={isSaving || Object.values(errors).some((e) => e)}
+          startIcon={isSaving && <CircularProgress size={16} />}
+        >
+          {isSaving ? 'Saving...' : 'Save'}
+        </Button>
+      </Stack>
+    </Stack>
+  </Box>
   );
 };
 

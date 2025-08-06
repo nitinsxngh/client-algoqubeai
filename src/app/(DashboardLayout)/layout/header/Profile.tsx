@@ -11,8 +11,19 @@ import {
   ListItemIcon,
   ListItemText,
   Button,
+  Typography,
+  Divider,
 } from '@mui/material';
-import { IconListCheck, IconMail, IconUser } from '@tabler/icons-react';
+import { 
+  IconListCheck, 
+  IconMail, 
+  IconUser, 
+  IconSettings, 
+  IconActivity,
+  IconLogout,
+  IconShield,
+  IconCreditCard
+} from '@tabler/icons-react';
 
 const Profile = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -77,33 +88,88 @@ const Profile = () => {
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         sx={{
           '& .MuiMenu-paper': {
-            width: 200,
+            width: 280,
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
           },
         }}
       >
-        <MenuItem onClick={handleClose} component={Link} href="/profile">
-          <ListItemIcon>
-            <IconUser width={20} />
-          </ListItemIcon>
-          <ListItemText>My Profile</ListItemText>
-        </MenuItem>
+        {/* User Info Header */}
+        <Box sx={{ p: 2, borderBottom: '1px solid rgba(0, 0, 0, 0.06)' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar
+              src="/images/profile/user-1.jpg"
+              alt="profile"
+              sx={{ width: 48, height: 48 }}
+            />
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                John Doe
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                john.doe@example.com
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
 
-        <MenuItem onClick={handleClose} component={Link} href="/account">
-          <ListItemIcon>
-            <IconMail width={20} />
-          </ListItemIcon>
-          <ListItemText>My Account</ListItemText>
-        </MenuItem>
+        {/* Profile Section */}
+        <Box sx={{ py: 1 }}>
+          <MenuItem onClick={handleClose} component={Link} href="/settings">
+            <ListItemIcon>
+              <IconSettings width={20} />
+            </ListItemIcon>
+            <ListItemText>
+              <Typography variant="body2">Settings</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Configure your preferences
+              </Typography>
+            </ListItemText>
+          </MenuItem>
 
-        <Box mt={1} py={1} px={2}>
+          <MenuItem onClick={handleClose} component={Link} href="/activity">
+            <ListItemIcon>
+              <IconActivity width={20} />
+            </ListItemIcon>
+            <ListItemText>
+              <Typography variant="body2">Activity</Typography>
+              <Typography variant="caption" color="text.secondary">
+                View your activity history
+              </Typography>
+            </ListItemText>
+          </MenuItem>
+
+          <MenuItem onClick={handleClose} component={Link} href="/billing">
+            <ListItemIcon>
+              <IconCreditCard width={20} />
+            </ListItemIcon>
+            <ListItemText>
+              <Typography variant="body2">Billing</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Manage subscriptions & payments
+              </Typography>
+            </ListItemText>
+          </MenuItem>
+        </Box>
+
+        <Divider />
+
+        {/* Logout Section */}
+        <Box sx={{ p: 1 }}>
           <Button
             variant="outlined"
-            color="primary"
+            color="error"
             fullWidth
             onClick={handleLogout}
             disabled={loggingOut}
+            startIcon={<IconLogout size={18} />}
+            sx={{ 
+              justifyContent: 'flex-start',
+              textTransform: 'none',
+              py: 1.5
+            }}
           >
-            {loggingOut ? 'Logging out…' : 'Logout'}
+            {loggingOut ? 'Logging out…' : 'Sign Out'}
           </Button>
         </Box>
       </Menu>
