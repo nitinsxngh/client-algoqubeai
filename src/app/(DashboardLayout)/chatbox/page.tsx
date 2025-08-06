@@ -174,9 +174,11 @@ const ChatboxPage = () => {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error('Save failed');
-
       const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Save failed');
+      }
       setChatbox(data.chatbox);
       setShowForm(false);
       setIsEditing(false);
@@ -198,8 +200,9 @@ const ChatboxPage = () => {
           }, 2000);
         }
       }, 1800);
-    } catch (err) {
-      alert(`Error ${isEditing ? 'updating' : 'creating'} chatbot`);
+    } catch (err: any) {
+      const errorMessage = err.message || `Error ${isEditing ? 'updating' : 'creating'} chatbot`;
+      alert(errorMessage);
       console.error(err);
       setIsSaving(false);
     }
