@@ -369,7 +369,7 @@ const PlanPage = () => {
                       {/* Features */}
                       <Box flex={1}>
                         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                          What's included:
+                          What&apos;s included:
                         </Typography>
                         <Stack spacing={1.5}>
                           {plan.features.map((feature, idx) => (
@@ -467,7 +467,7 @@ const PlanPage = () => {
                     What happens to unused tokens?
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Unused tokens roll over to the next billing cycle, so you never lose what you've paid for.
+                    Unused tokens roll over to the next billing cycle, so you never lose what you&apos;ve paid for.
                   </Typography>
                 </Box>
               </Grid>
@@ -487,7 +487,7 @@ const PlanPage = () => {
                     Do you offer refunds?
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    We offer a 30-day money-back guarantee. If you're not satisfied, we'll refund your payment.
+                    We offer a 30-day money-back guarantee. If you&apos;re not satisfied, we&apos;ll refund your payment.
                   </Typography>
                 </Box>
               </Grid>

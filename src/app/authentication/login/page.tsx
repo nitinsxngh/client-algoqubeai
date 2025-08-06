@@ -81,7 +81,7 @@ const Login2 = () => {
                           variant="body1"
                           fontWeight="500"
                         >
-                          Don't have an account?
+                          Don&apos;t have an account?
                         </Typography>
                         <Typography
                           component={Link}
