@@ -101,8 +101,8 @@ const SidebarItems = () => {
             </Avatar>
             <Box>
               <Typography variant="h5" fontWeight={700} sx={{ color: 'text.primary' }}>
-                AlgoqubeAI
-              </Typography>
+            AlgoqubeAI
+          </Typography>
               <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                 AI Chatbot Platform
               </Typography>
@@ -112,7 +112,7 @@ const SidebarItems = () => {
 
         {/* Menu Items with better spacing */}
         <Box sx={{ flex: 1, py: 1 }}>
-          {renderMenuItems(Menuitems, pathDirect)}
+        {renderMenuItems(Menuitems, pathDirect)}
         </Box>
 
         {/* Professional Bottom Section */}

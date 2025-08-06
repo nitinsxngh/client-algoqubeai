@@ -10,6 +10,7 @@ import {
 import { motion } from 'framer-motion';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import { useRouter } from 'next/navigation';
+import { authenticatedFetch } from '@/utils/api';
 
 interface Plan {
   id: string;
@@ -56,7 +57,7 @@ const PlanPage = () => {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/users/plans`);
+        const response = await authenticatedFetch(`${BACKEND_URL}/api/users/plans`);
         if (response.ok) {
           const data = await response.json();
           setPlans(data.plans);
@@ -68,9 +69,7 @@ const PlanPage = () => {
 
     const fetchUserData = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/users/token-usage`, {
-          credentials: 'include',
-        });
+        const response = await authenticatedFetch(`${BACKEND_URL}/api/users/token-usage`);
         if (response.ok) {
           const data = await response.json();
           setTokenUsage(data);
@@ -92,10 +91,8 @@ const PlanPage = () => {
     
     setSelectingPlan(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/users/select-plan`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/users/select-plan`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ planId }),
       });
 

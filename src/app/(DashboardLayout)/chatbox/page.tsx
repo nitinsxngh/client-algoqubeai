@@ -88,9 +88,8 @@ const ChatboxPage = () => {
       }
 
       setScrapeStatus('Connecting to website...');
-      const res = await fetch(`${BACKEND_URL}/api/scrape`, {
+      const res = await authenticatedFetch(`${BACKEND_URL}/api/scrape`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
 

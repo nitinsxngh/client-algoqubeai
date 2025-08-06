@@ -30,7 +30,7 @@ const Register2 = () => (
               lg: 6,
               xl: 5
             }}
-          >
+            >
               <Card
                 elevation={24}
                 sx={{
@@ -112,8 +112,8 @@ const Register2 = () => (
                       </Typography>
                     </Stack>
                   }
-                                  />
-                </Card>
+                />
+              </Card>
           </Grid>
         </Grid>
       </Container>
