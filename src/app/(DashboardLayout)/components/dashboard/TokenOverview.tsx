@@ -35,7 +35,18 @@ const TokenUsageOverview = () => {
     setError(null);
 
     try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`${BACKEND_URL}/api/users/token-usage`, {
+        headers,
         credentials: 'include',
       });
 
@@ -71,8 +82,19 @@ const TokenUsageOverview = () => {
 
   const fetchConversationData = async (tokenData: TokenUsage) => {
     try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       // Fetch user's chatboxes to get conversation data
       const response = await fetch(`${BACKEND_URL}/api/chatboxes`, {
+        headers,
         credentials: 'include',
       });
 

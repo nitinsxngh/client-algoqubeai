@@ -59,7 +59,18 @@ const ProductPerformance = () => {
 
   const fetchChatboxes = async () => {
     try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const userRes = await fetch(`${BACKEND_URL}/api/users/me`, {
+        headers,
         credentials: 'include',
       });
       
@@ -71,6 +82,7 @@ const ProductPerformance = () => {
       const user = userData; // API now returns user object directly
 
       const chatboxRes = await fetch(`${BACKEND_URL}/api/chatboxes?createdBy=${user._id}`, {
+        headers,
         credentials: 'include',
       });
       
