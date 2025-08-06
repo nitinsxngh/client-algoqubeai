@@ -42,8 +42,19 @@ const ChatBoxOverview = () => {
   const fetchUserAndChatbox = async () => {
     setLoading(true);
     try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const userRes = await fetch(`${BACKEND_URL}/api/users/me`, {
         method: 'GET',
+        headers,
         credentials: 'include',
       });
 
@@ -69,7 +80,10 @@ const ChatBoxOverview = () => {
 
       const chatboxRes = await fetch(
         `${BACKEND_URL}/api/chatboxes?createdBy=${userData._id}`,
-        { credentials: 'include' }
+        { 
+          headers,
+          credentials: 'include' 
+        }
       );
 
       const chatboxData = await chatboxRes.json();

@@ -51,7 +51,18 @@ const TokenUsageOverview = () => {
         setRefreshing(true);
       }
       
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`${BACKEND_URL}/api/users/token-usage`, {
+        headers,
         credentials: 'include',
       });
       
@@ -90,8 +101,19 @@ const TokenUsageOverview = () => {
 
   const handleInitializeTokens = async () => {
     try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`${BACKEND_URL}/api/users/initialize-tokens`, {
         method: 'POST',
+        headers,
         credentials: 'include',
       });
       
@@ -109,9 +131,19 @@ const TokenUsageOverview = () => {
 
   const handleTestTokenConsumption = async () => {
     try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`${BACKEND_URL}/api/users/test-token-consumption`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify({ amount: 5 }),
       });
