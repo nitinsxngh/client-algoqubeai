@@ -105,16 +105,22 @@ const AuthLogin = ({ title, subtitle, subtext }: LoginProps) => {
       const data = await res.json();
 
       if (res.ok) {
+        console.log('Login successful:', data);
+        
         // Store user data
         localStorage.setItem('user', JSON.stringify(data.user));
         
         // Store JWT token if it's in the response
         if (data.token) {
           localStorage.setItem('token', data.token);
+          console.log('Token stored:', data.token.substring(0, 20) + '...');
+        } else {
+          console.warn('No token in response');
         }
         
         router.push('/');
       } else {
+        console.error('Login failed:', data);
         setError(data.message || 'Login failed');
       }
     } catch (err) {

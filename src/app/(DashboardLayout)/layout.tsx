@@ -44,14 +44,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // Get token from localStorage
     const token = localStorage.getItem('token');
     
+    // If no token, redirect to login immediately
+    if (!token) {
+      router.replace("/authentication/login");
+      return;
+    }
+    
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
     };
-    
-    // Add Authorization header if token exists
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
     
     fetch(`${backendUrl}/api/users/me`, {
       method: "GET",
@@ -60,12 +62,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     })
       .then((res) => {
         if (!res.ok) {
+          // Clear invalid token
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
           router.replace("/authentication/login");
         } else {
           setAuthChecked(true);
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('Auth check error:', error);
+        // Clear invalid token
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         router.replace("/authentication/login");
       });
   }, [pathname, router, backendUrl]);
