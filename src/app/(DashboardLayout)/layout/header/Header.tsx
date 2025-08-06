@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import Link from 'next/link';
 import Profile from './Profile';
+import { authenticatedFetch, isAuthenticated } from '../../../../utils/api';
 import { 
   IconBellRinging, 
   IconMenu, 
@@ -62,25 +63,14 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
   const API_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || 'http://localhost:4000';
 
   useEffect(() => {
-    // Get token from localStorage
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
+    // Check if user is authenticated
+    if (!isAuthenticated()) {
       setIsLoggedIn(false);
       setIsLoading(false);
       return;
     }
     
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    };
-    
-    fetch(`${API_URL}/api/users/me`, {
-      method: 'GET',
-      headers,
-      credentials: 'include',
-    })
+    authenticatedFetch(`${API_URL}/api/users/me`)
       .then((res) => {
         console.log('Header auth check status:', res.status);
         setIsLoggedIn(res.ok);
@@ -102,20 +92,7 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
   const fetchNotifications = async () => {
     setLoadingNotifications(true);
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem('token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const response = await fetch(`${API_URL}/api/notifications?limit=10`, {
-        headers,
-        credentials: 'include',
-      });
+      const response = await authenticatedFetch(`${API_URL}/api/notifications?limit=10`);
       
       if (response.ok) {
         const data = await response.json();
@@ -131,20 +108,8 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
 
   const markNotificationAsRead = async (notificationId: string) => {
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem('token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      await fetch(`${API_URL}/api/notifications/${notificationId}/read`, {
+      await authenticatedFetch(`${API_URL}/api/notifications/${notificationId}/read`, {
         method: 'PATCH',
-        headers,
-        credentials: 'include',
       });
       
       // Update local state
