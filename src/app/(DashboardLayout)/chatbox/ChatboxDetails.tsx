@@ -37,6 +37,7 @@ import {
 import { motion } from 'framer-motion';
 import ChatboxEmbed from './ChatboxEmbed';
 import ChatboxLivePreview from './ChatboxLivePreview';
+import { authenticatedFetch } from '@/utils/api';
 
 const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
   const [displayName, setDisplayName] = useState(chatbox?.configuration?.displayName || '');
@@ -57,9 +58,8 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
   // Check backend connectivity
   const checkBackendConnectivity = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/chatboxes`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes`, {
         method: 'GET',
-        credentials: 'include',
       });
       return response.status !== 0; // Any response means server is reachable
     } catch (error) {
@@ -71,9 +71,8 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
   // Check if user is authenticated
   const checkAuthentication = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/users/me`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/users/me`, {
         method: 'GET',
-        credentials: 'include',
       });
       return response.ok;
     } catch (error) {
