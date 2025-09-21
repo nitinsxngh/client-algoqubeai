@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   AppBar,
@@ -18,6 +18,12 @@ import {
   Divider,
   Avatar,
   Chip,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  Slide,
+  Backdrop,
 } from '@mui/material';
 import Link from 'next/link';
 import Profile from './Profile';
@@ -59,6 +65,7 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || 'http://localhost:4000';
 
@@ -82,14 +89,7 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
       .finally(() => setIsLoading(false));
   }, [API_URL]);
 
-  // Fetch notifications when user is logged in
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchNotifications();
-    }
-  }, [isLoggedIn]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     setLoadingNotifications(true);
     try {
       const response = await authenticatedFetch(`${API_URL}/api/notifications?limit=10`);
@@ -104,7 +104,14 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
     } finally {
       setLoadingNotifications(false);
     }
-  };
+  }, [API_URL]);
+
+  // Fetch notifications when user is logged in
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchNotifications();
+    }
+  }, [isLoggedIn, fetchNotifications]);
 
   const markNotificationAsRead = async (notificationId: string) => {
     try {
@@ -142,11 +149,11 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
   };
 
   const handleNotificationClick = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationAnchor(event.currentTarget);
+    setNotificationPanelOpen(true);
   };
 
   const handleNotificationClose = () => {
-    setNotificationAnchor(null);
+    setNotificationPanelOpen(false);
   };
 
   const getNotificationIcon = (type: string) => {
@@ -192,106 +199,175 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
           </Badge>
         </IconButton>
 
-        <Menu
-          id="notifications-menu"
-          anchorEl={notificationAnchor}
-          open={Boolean(notificationAnchor)}
+        {/* Notification Panel */}
+        <Drawer
+          anchor="right"
+          open={notificationPanelOpen}
           onClose={handleNotificationClose}
-          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
           sx={{
-            '& .MuiMenu-paper': {
-              width: 380,
-              maxHeight: 400,
-              overflow: 'auto',
+            '& .MuiDrawer-paper': {
+              width: 400,
+              maxWidth: '90vw',
+              boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.15)',
             },
           }}
+          SlideProps={{
+            direction: 'left',
+          }}
         >
-          <Box sx={{ p: 2, borderBottom: '1px solid rgba(0, 0, 0, 0.06)' }}>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Notifications
-            </Typography>
-            {unreadCount > 0 && (
-              <Chip
-                label={`${unreadCount} unread`}
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <Box sx={{ 
+              p: 3, 
+              borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              bgcolor: 'background.paper',
+              position: 'sticky',
+              top: 0,
+              zIndex: 1,
+            }}>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                  Notifications
+                </Typography>
+                {unreadCount > 0 && (
+                  <Chip
+                    label={`${unreadCount} unread`}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
+                )}
+              </Box>
+              <IconButton 
+                onClick={handleNotificationClose}
                 size="small"
-                color="primary"
-                sx={{ mt: 1 }}
-              />
-            )}
-          </Box>
-
-          {loadingNotifications ? (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                Loading notifications...
-              </Typography>
-            </Box>
-          ) : notifications.length === 0 ? (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                No notifications
-              </Typography>
-            </Box>
-          ) : (
-            notifications.map((notification) => (
-              <MenuItem
-                key={notification._id}
-                onClick={() => {
-                  markNotificationAsRead(notification._id);
-                  handleNotificationClose();
-                }}
-                sx={{
-                  py: 2,
-                  px: 2,
-                  borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
-                  '&:last-child': { borderBottom: 'none' },
-                  ...(!notification.read && {
-                    bgcolor: 'rgba(99, 102, 241, 0.04)',
-                  }),
+                sx={{ 
+                  bgcolor: 'rgba(0, 0, 0, 0.04)',
+                  '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.08)' }
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  <Avatar
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      bgcolor: notification.read ? 'rgba(0, 0, 0, 0.04)' : 'primary.light',
-                    }}
-                  >
-                    {getNotificationIcon(notification.type)}
-                  </Avatar>
-                </ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Typography variant="subtitle2" component="span" sx={{ fontWeight: notification.read ? 400 : 600, display: 'block' }}>
-                      {notification.title}
-                    </Typography>
-                  }
-                  secondary={
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" component="span" sx={{ mb: 0.5, display: 'block' }}>
-                        {notification.message}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" component="span" sx={{ display: 'block' }}>
-                        {formatTimeAgo(notification.createdAt)}
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </MenuItem>
-            ))
-          )}
+                <IconX size={20} />
+              </IconButton>
+            </Box>
 
-          <Divider />
-          <MenuItem onClick={handleNotificationClose} sx={{ py: 1.5 }}>
-            <ListItemText>
-              <Typography variant="body2" color="primary" sx={{ textAlign: 'center' }}>
-                View All Notifications
-              </Typography>
-            </ListItemText>
-          </MenuItem>
-        </Menu>
+            {/* Content */}
+            <Box sx={{ flex: 1, overflow: 'auto' }}>
+              {loadingNotifications ? (
+                <Box sx={{ p: 3, textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Loading notifications...
+                  </Typography>
+                </Box>
+              ) : notifications.length === 0 ? (
+                <Box sx={{ p: 3, textAlign: 'center' }}>
+                  <IconBellRinging size={48} color="#ccc" style={{ marginBottom: 16 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    No notifications yet
+                  </Typography>
+                </Box>
+              ) : (
+                <List sx={{ p: 0 }}>
+                  {notifications.map((notification, index) => (
+                    <ListItem key={notification._id} disablePadding>
+                      <ListItemButton
+                        onClick={() => {
+                          markNotificationAsRead(notification._id);
+                        }}
+                        sx={{
+                          py: 2,
+                          px: 3,
+                          borderBottom: index < notifications.length - 1 ? '1px solid rgba(0, 0, 0, 0.04)' : 'none',
+                          ...(!notification.read && {
+                            bgcolor: 'rgba(99, 102, 241, 0.04)',
+                            borderLeft: '3px solid',
+                            borderLeftColor: 'primary.main',
+                          }),
+                          '&:hover': {
+                            bgcolor: 'rgba(0, 0, 0, 0.02)',
+                          },
+                        }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 48, mr: 2 }}>
+                          <Avatar
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              bgcolor: notification.read ? 'rgba(0, 0, 0, 0.04)' : 'primary.light',
+                            }}
+                          >
+                            {getNotificationIcon(notification.type)}
+                          </Avatar>
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Typography 
+                              variant="subtitle2" 
+                              component="span" 
+                              sx={{ 
+                                fontWeight: notification.read ? 400 : 600, 
+                                display: 'block',
+                                mb: 0.5,
+                              }}
+                            >
+                              {notification.title}
+                            </Typography>
+                          }
+                          secondary={
+                            <Box component="span" sx={{ display: 'block' }}>
+                              <Typography 
+                                variant="body2" 
+                                color="text.secondary" 
+                                component="span" 
+                                sx={{ 
+                                  display: 'block',
+                                  mb: 0.5,
+                                  lineHeight: 1.4,
+                                }}
+                              >
+                                {notification.message}
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary" 
+                                component="span" 
+                                sx={{ display: 'block' }}
+                              >
+                                {formatTimeAgo(notification.createdAt)}
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+            </Box>
+
+            {/* Footer */}
+            {notifications.length > 0 && (
+              <Box sx={{ 
+                p: 2, 
+                borderTop: '1px solid rgba(0, 0, 0, 0.06)',
+                bgcolor: 'background.paper',
+                position: 'sticky',
+                bottom: 0,
+              }}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={handleNotificationClose}
+                  sx={{ textTransform: 'none', fontWeight: 500 }}
+                >
+                  View All Notifications
+                </Button>
+              </Box>
+            )}
+          </Box>
+        </Drawer>
 
         <Box flexGrow={1} />
 

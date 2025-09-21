@@ -15,7 +15,7 @@ const Logo = () => {
     <LinkStyled href="/">
       {/*<Image src="/images/logos/dark-logo.svg" alt="logo" height={70} width={174} priority />*/}
       <Box px={2} py={1}>
-        <h1 style={{ margin: 0 }}>AlgoqubeAI</h1>
+        <h1 style={{ margin: 0 }}>QubeAI</h1>
       </Box>
     </LinkStyled>
   );

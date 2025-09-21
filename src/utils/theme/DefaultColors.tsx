@@ -1,25 +1,25 @@
 import { createTheme } from "@mui/material/styles";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 
-export const plus = Plus_Jakarta_Sans({
-  weight: ["300", "400", "500", "600", "700"],
+export const inter = Inter({
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
   subsets: ["latin"],
   display: "swap",
-  fallback: ["Helvetica", "Arial", "sans-serif"],
+  fallback: ["Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"],
 });
 
 const baselightTheme = createTheme({
   direction: "ltr",
   palette: {
     primary: {
-      main: "#5D87FF",
+      main: "#667eea",
       light: "#ECF2FF",
-      dark: "#4570EA",
+      dark: "#5a6fd8",
     },
     secondary: {
-      main: "#49BEFF",
+      main: "#764ba2",
       light: "#E8F7FF",
-      dark: "#23afdb",
+      dark: "#6a4190",
     },
     success: {
       main: "#13DEB9",
@@ -46,12 +46,16 @@ const baselightTheme = createTheme({
       contrastText: "#ffffff",
     },
     grey: {
+      50: "#FAFBFC",
       100: "#F2F6FA",
       200: "#EAEFF4",
       300: "#DFE5EF",
       400: "#7C8FAC",
       500: "#5A6A85",
       600: "#2A3547",
+      700: "#1A202C",
+      800: "#171923",
+      900: "#0F1419",
     },
     text: {
       primary: "#2A3547",
@@ -65,24 +69,24 @@ const baselightTheme = createTheme({
     divider: "#e5eaef",
   },
   typography: {
-    fontFamily: plus.style.fontFamily,
+    fontFamily: inter.style.fontFamily,
     h1: {
       fontWeight: 600,
       fontSize: "2.25rem",
       lineHeight: "2.75rem",
-      fontFamily: plus.style.fontFamily,
+      fontFamily: inter.style.fontFamily,
     },
     h2: {
       fontWeight: 600,
       fontSize: "1.875rem",
       lineHeight: "2.25rem",
-      fontFamily: plus.style.fontFamily,
+      fontFamily: inter.style.fontFamily,
     },
     h3: {
       fontWeight: 600,
       fontSize: "1.5rem",
       lineHeight: "1.75rem",
-      fontFamily: plus.style.fontFamily,
+      fontFamily: inter.style.fontFamily,
     },
     h4: {
       fontWeight: 600,

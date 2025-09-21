@@ -31,6 +31,39 @@ const TokenUsageOverview = () => {
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT!;
 
+  const fetchConversationData = useCallback(async (tokenData: TokenUsage) => {
+    try {
+      const response = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes`, {
+        method: 'GET',
+      });
+
+      if (response.ok) {
+        const chatboxes = await response.json();
+        console.log('Raw chatboxes response:', chatboxes);
+        
+        // Handle null, undefined, or empty responses
+        if (!chatboxes) {
+          console.warn('No chatboxes data received');
+          generateChartData(tokenData);
+          return;
+        }
+        
+        // Ensure chatboxes is always an array
+        const chatboxArray = Array.isArray(chatboxes) ? chatboxes : [chatboxes];
+        console.log('Processed chatbox array:', chatboxArray);
+        
+        generateChartDataFromConversations(tokenData, chatboxArray);
+      } else {
+        // Fallback to basic chart if conversation data not available
+        generateChartData(tokenData);
+      }
+    } catch (err) {
+      console.error('Error fetching conversation data:', err);
+      // Fallback to basic chart
+      generateChartData(tokenData);
+    }
+  }, [BACKEND_URL]);
+
   const fetchTokenUsage = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -68,42 +101,9 @@ const TokenUsageOverview = () => {
     } finally {
       setLoading(false);
     }
-  }, [BACKEND_URL]);
+  }, [BACKEND_URL, fetchConversationData]);
 
-  const fetchConversationData = async (tokenData: TokenUsage) => {
-    try {
-      const response = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes`, {
-        method: 'GET',
-      });
-
-      if (response.ok) {
-        const chatboxes = await response.json();
-        console.log('Raw chatboxes response:', chatboxes);
-        
-        // Handle null, undefined, or empty responses
-        if (!chatboxes) {
-          console.warn('No chatboxes data received');
-          generateChartData(tokenData);
-          return;
-        }
-        
-        // Ensure chatboxes is always an array
-        const chatboxArray = Array.isArray(chatboxes) ? chatboxes : [chatboxes];
-        console.log('Processed chatbox array:', chatboxArray);
-        
-        generateChartDataFromConversations(tokenData, chatboxArray);
-      } else {
-        // Fallback to basic chart if conversation data not available
-        generateChartData(tokenData);
-      }
-    } catch (err) {
-      console.error('Error fetching conversation data:', err);
-      // Fallback to basic chart
-      generateChartData(tokenData);
-    }
-  };
-
-  const generateChartDataFromConversations = (data: TokenUsage, chatboxes: any[]) => {
+  const generateChartDataFromConversations = useCallback((data: TokenUsage, chatboxes: any[]) => {
     const days = parseInt(period);
     const dates = [];
     const tokensUsed = [];
@@ -264,9 +264,9 @@ const TokenUsageOverview = () => {
     ];
 
     setChartData({ options, series });
-  };
+  }, [period, primary, secondary]);
 
-  const generateChartData = (data: TokenUsage) => {
+  const generateChartData = useCallback((data: TokenUsage) => {
     const days = parseInt(period);
     const dates = [];
     const tokensUsed = [];
@@ -383,7 +383,7 @@ const TokenUsageOverview = () => {
     ];
 
     setChartData({ options, series });
-  };
+  }, [period, primary, secondary]);
 
   const handleChange = (event: any) => {
     const newPeriod = event.target.value;

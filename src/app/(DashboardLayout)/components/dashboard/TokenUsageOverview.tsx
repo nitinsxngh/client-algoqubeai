@@ -46,7 +46,7 @@ const TokenUsageOverview = () => {
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT!;
 
-  const fetchTokenUsage = async (isRefresh = false) => {
+  const fetchTokenUsage = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
         setRefreshing(true);
@@ -72,7 +72,7 @@ const TokenUsageOverview = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [BACKEND_URL]);
 
   useEffect(() => {
     fetchTokenUsage();
@@ -83,7 +83,7 @@ const TokenUsageOverview = () => {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [BACKEND_URL]);
+  }, [BACKEND_URL, fetchTokenUsage]);
 
   const handleRefresh = () => {
     fetchTokenUsage(true);

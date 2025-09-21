@@ -3,7 +3,7 @@
     const scriptTag = document.currentScript || document.querySelector('script[data-name]');
     const chatbotName = scriptTag?.getAttribute('data-name');
     const backendEndpoint = scriptTag?.getAttribute('data-endpoint') || 'http://localhost:4000';
-    const buttonText = scriptTag?.getAttribute('data-button-text') || '💬 Chat';
+    const buttonText = scriptTag?.getAttribute('data-button-text') || 'Chat';
 
     if (!chatbotName) {
       console.error('[Chatbot Embed] Missing data-name attribute in script tag.');
@@ -101,10 +101,61 @@
         let conversationStart = null;
         let currentConversationId = null;
 
+        // Function to detect mobile devices
+        function isMobileDevice() {
+          return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        // Function to get iframe styles based on device type
+        function getIframeStyles() {
+          const isMobile = isMobileDevice();
+          
+          if (isMobile) {
+            return {
+              position: 'fixed',
+              top: '0',
+              left: '0',
+              width: '100vw',
+              height: '100vh',
+              border: 'none',
+              borderRadius: '0',
+              boxShadow: 'none',
+              zIndex: '99999',
+              display: 'block',
+              opacity: '0',
+              transform: 'translateY(100%)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              background: '#ffffff'
+            };
+          } else {
+            return {
+              position: 'fixed',
+              bottom: '80px',
+              right: '20px',
+              width: '380px',
+              height: '600px',
+              border: 'none',
+              borderRadius: '16px',
+              boxShadow: `0 20px 60px rgba(0,0,0,0.3)`,
+              zIndex: '99999',
+              display: 'block',
+              opacity: '0',
+              transform: 'translateY(20px) scale(0.95)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              background: '#ffffff'
+            };
+          }
+        }
+
         button.addEventListener('click', () => {
           if (iframeVisible && iframe) {
             // Hide with animation
-            iframe.style.transform = 'translateY(20px) scale(0.95)';
+            const isMobile = isMobileDevice();
+            if (isMobile) {
+              iframe.style.transform = 'translateY(100%)';
+            } else {
+              iframe.style.transform = 'translateY(20px) scale(0.95)';
+            }
             iframe.style.opacity = '0';
             
             setTimeout(() => {
@@ -133,22 +184,7 @@
           if (!iframe) {
             iframe = document.createElement('iframe');
             iframe.src = `${backendEndpoint}/chat-widget?name=${encodeURIComponent(chatbot.name)}`;
-            Object.assign(iframe.style, {
-              position: 'fixed',
-              bottom: '80px',
-              right: '20px',
-              width: '380px',
-              height: '600px',
-              border: 'none',
-              borderRadius: '16px',
-              boxShadow: `0 20px 60px rgba(0,0,0,0.3)`,
-              zIndex: '99999',
-              display: 'block',
-              opacity: '0',
-              transform: 'translateY(20px) scale(0.95)',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              background: '#ffffff'
-            });
+            Object.assign(iframe.style, getIframeStyles());
             document.body.appendChild(iframe);
             
             // Trigger animation after a brief delay
@@ -159,7 +195,12 @@
           } else {
             iframe.style.display = 'block';
             iframe.style.opacity = '0';
-            iframe.style.transform = 'translateY(20px) scale(0.95)';
+            const isMobile = isMobileDevice();
+            if (isMobile) {
+              iframe.style.transform = 'translateY(100%)';
+            } else {
+              iframe.style.transform = 'translateY(20px) scale(0.95)';
+            }
             
             setTimeout(() => {
               iframe.style.opacity = '1';
@@ -184,7 +225,12 @@
         // Close iframe when clicking outside
         document.addEventListener('click', (e) => {
           if (iframeVisible && iframe && !iframe.contains(e.target) && !button.contains(e.target)) {
-            iframe.style.transform = 'translateY(20px) scale(0.95)';
+            const isMobile = isMobileDevice();
+            if (isMobile) {
+              iframe.style.transform = 'translateY(100%)';
+            } else {
+              iframe.style.transform = 'translateY(20px) scale(0.95)';
+            }
             iframe.style.opacity = '0';
             
             setTimeout(() => {
@@ -251,6 +297,34 @@
             .catch(err => {
               console.error('[Debug] Error saving message:', err);
             });
+          } else if (event.data.type === 'CLOSE_CHAT') {
+            // Handle close chat message from iframe
+            const isMobile = isMobileDevice();
+            if (isMobile) {
+              iframe.style.transform = 'translateY(100%)';
+            } else {
+              iframe.style.transform = 'translateY(20px) scale(0.95)';
+            }
+            iframe.style.opacity = '0';
+            
+            setTimeout(() => {
+              iframe.style.display = 'none';
+              iframeVisible = false;
+            }, 200);
+
+            if (conversationStart && currentConversationId) {
+              const duration = Math.floor((Date.now() - conversationStart) / 1000);
+              fetch(`${backendEndpoint}/api/analytics/complete/${encodeURIComponent(chatbot.name)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  conversationId: currentConversationId,
+                  duration: duration 
+                })
+              }).catch(console.warn);
+              conversationStart = null;
+              currentConversationId = null;
+            }
           }
         });
       })

@@ -24,13 +24,20 @@ import {
   IconShield,
   IconCreditCard
 } from '@tabler/icons-react';
-import { authenticatedFetch, clearAuth } from '@/utils/api';
+import { authenticatedFetch, clearAuth, getUser } from '@/utils/api';
 
 const Profile = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || 'http://localhost:4000';
+
+  // Get user data on component mount
+  React.useEffect(() => {
+    const userData = getUser();
+    setUser(userData);
+  }, []);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -101,10 +108,10 @@ const Profile = () => {
             />
             <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                John Doe
+                {user?.name || 'User'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                john.doe@example.com
+                {user?.email || 'user@example.com'}
               </Typography>
             </Box>
           </Box>

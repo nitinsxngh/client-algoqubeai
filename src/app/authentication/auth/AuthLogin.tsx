@@ -4,15 +4,12 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Button,
   Stack,
   Checkbox,
   FormControlLabel,
-  TextField,
   InputAdornment,
   IconButton,
   Alert,
-  CircularProgress,
   FormHelperText,
 } from '@mui/material';
 import {
@@ -33,6 +30,8 @@ import {
   ValidationError 
 } from '@/utils/validation';
 import ValidationSummary from '@/components/forms/ValidationSummary';
+import ModernTextField from '@/components/forms/ModernTextField';
+import ModernButton from '@/components/forms/ModernButton';
 
 interface LoginProps {
   title?: string;
@@ -87,7 +86,18 @@ const AuthLogin = ({ title, subtitle, subtext }: LoginProps) => {
     setValidationErrors(validation.errors);
     
     if (!validation.isValid) {
-      setError('Please fix the validation errors below');
+      if (validation.errors.length === 1) {
+        setError(validation.errors[0].message);
+      } else {
+        const fieldNames = validation.errors.map(error => {
+          switch(error.field) {
+            case 'email': return 'Email';
+            case 'password': return 'Password';
+            default: return error.field;
+          }
+        });
+        setError(`Please fill in: ${fieldNames.join(', ')}`);
+      }
       return;
     }
 
@@ -143,23 +153,6 @@ const AuthLogin = ({ title, subtitle, subtext }: LoginProps) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
     >
-      {title && (
-        <Typography 
-          variant="h3" 
-          fontWeight={700} 
-          mb={1}
-          sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            textAlign: 'center',
-          }}
-        >
-          {title}
-        </Typography>
-      )}
-
       {subtext}
 
       <Box mt={4}>
@@ -169,124 +162,50 @@ const AuthLogin = ({ title, subtitle, subtext }: LoginProps) => {
           </Alert>
         )}
 
-        <ValidationSummary errors={validationErrors} />
 
-        <Stack spacing={3}>
-          <Box>
-            <TextField
-              id="email"
-              type="email"
-              variant="outlined"
-              fullWidth
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onBlur={() => handleFieldBlur('email')}
-              onKeyPress={handleKeyPress}
-              error={hasFieldError(validationErrors, 'email')}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Email sx={{ color: 'text.secondary' }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                  bgcolor: 'background.paper',
-                  '&:hover': {
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'primary.main',
-                    },
-                  },
-                  '&.Mui-focused': {
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'primary.main',
-                      borderWidth: 2,
-                    },
-                  },
-                  '&.Mui-error': {
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'error.main',
-                    },
-                  },
-                },
-              }}
-            />
-            {hasFieldError(validationErrors, 'email') && (
-              <FormHelperText error sx={{ mt: 0.5, ml: 1.5 }}>
-                {getFieldError(validationErrors, 'email')}
-              </FormHelperText>
-            )}
-          </Box>
+        <Stack spacing={2}>
+          <ModernTextField
+            id="email"
+            type="email"
+            fullWidth
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => handleFieldBlur('email')}
+            onKeyPress={handleKeyPress}
+            error={hasFieldError(validationErrors, 'email')}
+            startIcon={<Email sx={{ color: 'text.secondary', fontSize: '1.2rem' }} />}
+          />
 
-          <Box>
-            <TextField
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              variant="outlined"
-              fullWidth
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onBlur={() => handleFieldBlur('password')}
-              onKeyPress={handleKeyPress}
-              error={hasFieldError(validationErrors, 'password')}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Lock sx={{ color: 'text.secondary' }} />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                  bgcolor: 'background.paper',
-                  '&:hover': {
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'primary.main',
-                    },
-                  },
-                  '&.Mui-focused': {
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'primary.main',
-                      borderWidth: 2,
-                    },
-                  },
-                  '&.Mui-error': {
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'error.main',
-                    },
-                  },
-                },
-              }}
-            />
-            {hasFieldError(validationErrors, 'password') && (
-              <FormHelperText error sx={{ mt: 0.5, ml: 1.5 }}>
-                {getFieldError(validationErrors, 'password')}
-              </FormHelperText>
-            )}
-          </Box>
+          <ModernTextField
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            fullWidth
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onBlur={() => handleFieldBlur('password')}
+            onKeyPress={handleKeyPress}
+            error={hasFieldError(validationErrors, 'password')}
+            startIcon={<Lock sx={{ color: 'text.secondary', fontSize: '1.2rem' }} />}
+            endIcon={
+              <IconButton
+                onClick={() => setShowPassword(!showPassword)}
+                edge="end"
+                sx={{ color: 'text.secondary' }}
+              >
+                {showPassword ? <VisibilityOff /> : <Visibility />}
+              </IconButton>
+            }
+          />
         </Stack>
 
         <Stack
           direction="row"
           justifyContent="space-between"
           alignItems="center"
-          mt={2}
-          mb={3}
+          mt={1.5}
+          mb={2}
         >
           <FormControlLabel
             control={
@@ -325,36 +244,15 @@ const AuthLogin = ({ title, subtitle, subtext }: LoginProps) => {
           </Typography>
         </Stack>
 
-        <Button
-          variant="contained"
-          size="large"
+        <ModernButton
+          variant="primary"
           fullWidth
           onClick={handleSubmit}
-          disabled={loading}
-          sx={{
-            borderRadius: 2,
-            py: 1.5,
-            textTransform: 'none',
-            fontSize: '1rem',
-            fontWeight: 600,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-              transform: 'translateY(-1px)',
-              boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
-            },
-            '&:disabled': {
-              background: 'rgba(0, 0, 0, 0.12)',
-            },
-            transition: 'all 0.3s ease',
-          }}
+          loading={loading}
+          loadingText="Signing in..."
         >
-          {loading ? (
-            <CircularProgress size={20} color="inherit" />
-          ) : (
-            'Sign in to your account'
-          )}
-        </Button>
+          Sign in to your account
+        </ModernButton>
       </Box>
 
       {subtitle}
