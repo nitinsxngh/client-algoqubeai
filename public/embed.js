@@ -149,12 +149,9 @@
           if (iframe && iframeVisible) {
             const isMobile = isMobileDevice();
             if (isMobile) {
-              const isAndroid = isAndroidDevice();
-              if (isAndroid) {
-                // Update Android iframe with minimal margin
-                iframe.style.height = 'calc(100vh - 5px)';
-                iframe.style.paddingBottom = '0';
-              }
+              // Mobile: full screen, no margins or padding
+              iframe.style.height = '100vh';
+              iframe.style.paddingBottom = '0';
             } else {
               const maxHeight = calculateResponsiveHeight();
               iframe.style.height = `${maxHeight}px`;
@@ -168,16 +165,13 @@
           const isMobile = isMobileDevice();
           
           if (isMobile) {
-            const isAndroid = isAndroidDevice();
-            const mobileHeight = isAndroid ? 'calc(100vh - 5px)' : '100vh'; // Minimal space for Android navigation bar
-            
             return {
               position: 'fixed',
               top: '0',
               left: '0',
               width: '100vw',
-              height: mobileHeight,
-              height: isAndroid ? 'calc(100dvh - 5px)' : '100dvh', // Dynamic viewport height for mobile
+              height: '100vh',
+              height: '100dvh', // Dynamic viewport height for mobile
               border: 'none',
               borderRadius: '0',
               boxShadow: 'none',
@@ -187,7 +181,7 @@
               transform: 'translateY(100%)',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               background: '#ffffff',
-              paddingBottom: '0' // Remove padding for Android navigation bar
+              paddingBottom: '0' // No padding
             };
           } else {
             // Calculate responsive height for desktop
