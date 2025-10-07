@@ -96,6 +96,14 @@
 
         document.body.appendChild(button);
 
+        // Add resize listener to update iframe dimensions
+        window.addEventListener('resize', updateIframeDimensions);
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+          window.removeEventListener('resize', updateIframeDimensions);
+        });
+
         let iframe;
         let iframeVisible = false;
         let conversationStart = null;
@@ -106,17 +114,63 @@
           return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         }
 
+        // Function to detect Android devices
+        function isAndroidDevice() {
+          return /Android/i.test(navigator.userAgent);
+        }
+
+        // Function to calculate responsive height
+        function calculateResponsiveHeight() {
+          const isMobile = isMobileDevice();
+          if (isMobile) {
+            return window.innerHeight;
+          }
+          
+          // Desktop responsive height calculation
+          const screenHeight = window.innerHeight;
+          
+          if (screenHeight <= 600) {
+            // Very small screens (like small laptops) - use most of the screen
+            return Math.min(450, screenHeight - 20);
+          } else if (screenHeight <= 800) {
+            // Small laptop screens - use more space
+            return Math.min(550, screenHeight - 40);
+          } else if (screenHeight <= 1000) {
+            // Medium screens
+            return Math.min(650, screenHeight - 40);
+          } else {
+            // Large screens - use more space
+            return Math.min(700, screenHeight - 40);
+          }
+        }
+
+        // Function to update iframe dimensions on resize
+        function updateIframeDimensions() {
+          if (iframe && iframeVisible) {
+            const isMobile = isMobileDevice();
+            if (!isMobile) {
+              const maxHeight = calculateResponsiveHeight();
+              iframe.style.height = `${maxHeight}px`;
+              iframe.style.maxHeight = `${maxHeight}px`;
+            }
+          }
+        }
+
         // Function to get iframe styles based on device type
         function getIframeStyles() {
           const isMobile = isMobileDevice();
           
           if (isMobile) {
+            const isAndroid = isAndroidDevice();
+            const mobileHeight = isAndroid ? 'calc(100vh - 20px)' : '100vh'; // Account for Android navigation bar
+            
             return {
               position: 'fixed',
               top: '0',
               left: '0',
               width: '100vw',
-              height: '100vh',
+              height: mobileHeight,
+              height: isAndroid ? 'calc(100dvh - 20px)' : '100dvh', // Dynamic viewport height for mobile
               border: 'none',
               borderRadius: '0',
               boxShadow: 'none',
@@ -125,18 +179,24 @@
               opacity: '0',
               transform: 'translateY(100%)',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              background: '#ffffff'
+              background: '#ffffff',
+              paddingBottom: isAndroid ? '20px' : '0' // Add padding for Android navigation bar
             };
           } else {
+            // Calculate responsive height for desktop
+            const maxHeight = calculateResponsiveHeight();
+            const width = 350; // Match backend dimensions
+            
             return {
               position: 'fixed',
-              bottom: '80px',
+              bottom: '20px',
               right: '20px',
-              width: '380px',
-              height: '600px',
+              width: `${width}px`,
+              height: `${maxHeight}px`,
+              maxHeight: `${maxHeight}px`,
               border: 'none',
-              borderRadius: '16px',
-              boxShadow: `0 20px 60px rgba(0,0,0,0.3)`,
+              borderRadius: '12px',
+              boxShadow: `0 0 15px rgba(0,0,0,0.2)`,
               zIndex: '99999',
               display: 'block',
               opacity: '0',
@@ -193,6 +253,8 @@
               iframe.style.transform = 'translateY(0) scale(1)';
             }, 50);
           } else {
+            // Update dimensions before showing
+            Object.assign(iframe.style, getIframeStyles());
             iframe.style.display = 'block';
             iframe.style.opacity = '0';
             const isMobile = isMobileDevice();
