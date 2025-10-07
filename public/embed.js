@@ -151,9 +151,9 @@
             if (isMobile) {
               const isAndroid = isAndroidDevice();
               if (isAndroid) {
-                // Update Android iframe with reduced padding
-                iframe.style.height = 'calc(100vh - 10px)';
-                iframe.style.paddingBottom = '10px';
+                // Update Android iframe with minimal margin
+                iframe.style.height = 'calc(100vh - 5px)';
+                iframe.style.paddingBottom = '0';
               }
             } else {
               const maxHeight = calculateResponsiveHeight();
@@ -169,7 +169,7 @@
           
           if (isMobile) {
             const isAndroid = isAndroidDevice();
-            const mobileHeight = isAndroid ? 'calc(100vh - 10px)' : '100vh'; // Minimal space for Android navigation bar
+            const mobileHeight = isAndroid ? 'calc(100vh - 5px)' : '100vh'; // Minimal space for Android navigation bar
             
             return {
               position: 'fixed',
@@ -177,7 +177,7 @@
               left: '0',
               width: '100vw',
               height: mobileHeight,
-              height: isAndroid ? 'calc(100dvh - 10px)' : '100dvh', // Dynamic viewport height for mobile
+              height: isAndroid ? 'calc(100dvh - 5px)' : '100dvh', // Dynamic viewport height for mobile
               border: 'none',
               borderRadius: '0',
               boxShadow: 'none',
@@ -187,7 +187,7 @@
               transform: 'translateY(100%)',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               background: '#ffffff',
-              paddingBottom: isAndroid ? '10px' : '0' // Reduced padding for Android navigation bar
+              paddingBottom: '0' // Remove padding for Android navigation bar
             };
           } else {
             // Calculate responsive height for desktop
