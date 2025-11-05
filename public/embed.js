@@ -50,14 +50,44 @@
           }
         });
 
-        // Create Modern Chat Button
+        // Load Inter font dynamically if not already loaded
+        if (!document.querySelector('link[href*="fonts.googleapis.com/css2?family=Inter"]')) {
+          const fontLink = document.createElement('link');
+          fontLink.rel = 'preconnect';
+          fontLink.href = 'https://fonts.googleapis.com';
+          document.head.appendChild(fontLink);
+          
+          const fontLink2 = document.createElement('link');
+          fontLink2.rel = 'preconnect';
+          fontLink2.href = 'https://fonts.gstatic.com';
+          fontLink2.crossOrigin = 'anonymous';
+          document.head.appendChild(fontLink2);
+          
+          const fontStyle = document.createElement('link');
+          fontStyle.rel = 'stylesheet';
+          fontStyle.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
+          document.head.appendChild(fontStyle);
+        }
+
+        // Create Modern Chat Button with AI Sparkle Logo
         const button = document.createElement('div');
+        
+        // Get the frontend URL to construct the logo path
+        let frontendUrl;
+        if (scriptTag?.src) {
+          const scriptUrl = new URL(scriptTag.src, window.location.href);
+          frontendUrl = `${scriptUrl.protocol}//${scriptUrl.host}`;
+        } else {
+          frontendUrl = window.location.origin;
+        }
+        const logoUrl = `${frontendUrl}/chatlogowhite.svg`;
+        
+        const fontFamily = config.textFont || '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+        
         button.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-            <span style="font-weight: 500;">${buttonText}</span>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="${logoUrl}" alt="AI Chat" style="width: 24px; height: 24px; object-fit: contain; flex-shrink: 0;" onerror="this.style.display='none';" />
+            <span style="font-family: ${fontFamily}; font-weight: 500; white-space: nowrap; letter-spacing: 0.3px;">Ask me Anything!</span>
           </div>
         `;
         
@@ -72,7 +102,7 @@
           cursor: 'pointer',
           boxShadow: `0 8px 32px ${themeColor}40`,
           zIndex: '99999',
-          fontFamily: config.textFont || 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+          fontFamily: fontFamily,
           fontSize: '14px',
           border: 'none',
           transition: 'all 0.3s ease',
@@ -80,7 +110,7 @@
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          minWidth: '120px'
+          minWidth: 'auto'
         });
 
         // Add hover effects
@@ -171,7 +201,7 @@
               left: '0',
               width: '100vw',
               height: '100vh',
-              height: '100dvh', // Dynamic viewport height for mobile
+              height: '100dvh', // Dynamic viewport height for mobiled
               border: 'none',
               borderRadius: '0',
               boxShadow: 'none',
