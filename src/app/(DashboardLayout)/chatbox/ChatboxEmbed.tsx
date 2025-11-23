@@ -58,6 +58,10 @@ const ChatboxEmbed = ({
   const [selectedPlatform, setSelectedPlatform] = useState('html');
   const [customPosition, setCustomPosition] = useState('bottom-right');
   const [showSnackbar, setShowSnackbar] = useState(false);
+  const [emailLink, setEmailLink] = useState('');
+  const [generatedLink, setGeneratedLink] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState(false);
 
   const embedCode = `<script src="${frontendUrl}/embed.js" data-name="${name}" data-endpoint="${backendUrl}"></script>`;
 
@@ -96,6 +100,42 @@ function App() {
     setCopied(true);
     setShowSnackbar(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const generateSecureLink = async () => {
+    if (!emailLink.trim()) {
+      setShowSnackbar(true);
+      return;
+    }
+    setGeneratingLink(true);
+    try {
+      const res = await fetch(`${backendUrl}/api/chatboxes/encrypt-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailLink.trim(), chatboxId: name })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const secureLink = `${frontendUrl}/chat?chatboxId=${encodeURIComponent(name)}&token=${encodeURIComponent(data.token)}`;
+        setGeneratedLink(secureLink);
+      } else {
+        setShowSnackbar(true);
+      }
+    } catch (err) {
+      console.error('Failed to generate link:', err);
+      setShowSnackbar(true);
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
+  const copyLink = () => {
+    if (generatedLink) {
+      navigator.clipboard.writeText(generatedLink);
+      setLinkCopied(true);
+      setShowSnackbar(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
   };
 
   const getCodeForPlatform = () => {
@@ -355,11 +395,177 @@ function App() {
               </Paper>
             </Box>
 
+            {/* Secure Chat Link Generator */}
+            <Divider sx={{ my: 3 }} />
+            <Box>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                  Generate Chat Link for CRM/Email Campaigns
+                </Typography>
+              </Stack>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Create a universal link that automatically detects email from CRM tracking parameters. No need to manually add email to each link!
+              </Typography>
+              
+              {/* Universal Link (Auto-detect) */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                  Universal Link (Auto-detects email from CRM)
+                </Typography>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    bgcolor: 'rgba(0,0,0,0.02)',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="flex-start">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        flex: 1,
+                        wordBreak: 'break-all',
+                        fontFamily: 'monospace',
+                        fontSize: '0.75rem',
+                        color: 'text.secondary',
+                      }}
+                    >
+                      {`${frontendUrl}/chat?chatboxId=${encodeURIComponent(name)}&email={{email}}`}
+                    </Typography>
+                    <Tooltip title="Copy link">
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          const universalLink = `${frontendUrl}/chat?chatboxId=${encodeURIComponent(name)}&email={{email}}`;
+                          navigator.clipboard.writeText(universalLink);
+                          setLinkCopied(true);
+                          setShowSnackbar(true);
+                          setTimeout(() => setLinkCopied(false), 2000);
+                        }}
+                        sx={{
+                          bgcolor: 'rgba(0,0,0,0.04)',
+                          color: 'text.primary',
+                          '&:hover': {
+                            bgcolor: 'rgba(0,0,0,0.08)',
+                          },
+                        }}
+                      >
+                        <IconCopy size={16} />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                </Paper>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  Replace <code style={{ background: 'rgba(0,0,0,0.05)', padding: '2px 4px', borderRadius: 2 }}>{'{{email}}'}</code> with your CRM&apos;s email merge tag (e.g., <code style={{ background: 'rgba(0,0,0,0.05)', padding: '2px 4px', borderRadius: 2 }}>{'{Contact.Email}'}</code>, <code style={{ background: 'rgba(0,0,0,0.05)', padding: '2px 4px', borderRadius: 2 }}>{'*|EMAIL|*'}</code>, <code style={{ background: 'rgba(0,0,0,0.05)', padding: '2px 4px', borderRadius: 2 }}>{'{{email}}'}</code>)
+                </Typography>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Manual Link Generator */}
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                  Manual Link (Single Email)
+                </Typography>
+                <Stack spacing={2}>
+                  <TextField
+                    label="Recipient Email"
+                    type="email"
+                    value={emailLink}
+                    onChange={(e) => setEmailLink(e.target.value)}
+                    placeholder="user@example.com"
+                    fullWidth
+                    size="small"
+                    sx={{ borderRadius: 2 }}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={generateSecureLink}
+                    disabled={!emailLink.trim() || generatingLink}
+                    sx={{
+                      borderRadius: 2,
+                      bgcolor: themeColor,
+                      '&:hover': { bgcolor: themeColor },
+                    }}
+                  >
+                    {generatingLink ? 'Generating...' : 'Generate Secure Link'}
+                  </Button>
+                  {generatedLink && (
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        bgcolor: 'rgba(0,0,0,0.02)',
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
+                      <Stack direction="row" spacing={1} alignItems="flex-start">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            flex: 1,
+                            wordBreak: 'break-all',
+                            fontFamily: 'monospace',
+                            fontSize: '0.75rem',
+                            color: 'text.secondary',
+                          }}
+                        >
+                          {generatedLink}
+                        </Typography>
+                        <Tooltip title="Copy link">
+                          <IconButton
+                            size="small"
+                            onClick={copyLink}
+                            sx={{
+                              bgcolor: linkCopied ? 'success.main' : 'rgba(0,0,0,0.04)',
+                              color: linkCopied ? 'white' : 'text.primary',
+                              '&:hover': {
+                                bgcolor: linkCopied ? 'success.main' : 'rgba(0,0,0,0.08)',
+                              },
+                            }}
+                          >
+                            {linkCopied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </Paper>
+                  )}
+                </Stack>
+              </Box>
+
+              {/* CRM Instructions */}
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  borderRadius: 2,
+                  mt: 2,
+                  '& .MuiAlert-icon': { color: themeColor }
+                }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  CRM Integration Guide:
+                </Typography>
+                <Typography variant="caption" component="div">
+                  • <strong>HubSpot:</strong> Use <code>{'{Contact.Email}'}</code> or <code>{'{email}'}</code><br/>
+                  • <strong>Mailchimp:</strong> Use <code>{'*|EMAIL|*'}</code><br/>
+                  • <strong>SendGrid:</strong> Use <code>{'{{email}}'}</code> or <code>{'%email%'}</code><br/>
+                  • <strong>ConvertKit:</strong> Use <code>{'{{subscriber.email}}'}</code><br/>
+                  • <strong>Other CRMs:</strong> The system auto-detects emails from common tracking parameters like <code>email</code>, <code>user_email</code>, <code>subscriber</code>
+                </Typography>
+              </Alert>
+            </Box>
+
             {/* Help & Support */}
             <Alert 
               severity="info" 
               sx={{ 
                 borderRadius: 2,
+                mt: 3,
                 '& .MuiAlert-icon': { color: themeColor }
               }}
               action={
@@ -410,7 +616,7 @@ function App() {
           severity="success" 
           sx={{ width: '100%' }}
         >
-          Code copied to clipboard!
+          {linkCopied ? 'Link copied to clipboard!' : 'Code copied to clipboard!'}
         </Alert>
       </Snackbar>
     </>

@@ -62,6 +62,7 @@ const TokenUsageOverview = () => {
       // Fallback to basic chart
       generateChartData(tokenData);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [BACKEND_URL]);
 
   const fetchTokenUsage = useCallback(async () => {
@@ -264,6 +265,7 @@ const TokenUsageOverview = () => {
     ];
 
     setChartData({ options, series });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, primary, secondary]);
 
   const generateChartData = useCallback((data: TokenUsage) => {

@@ -6,6 +6,7 @@ import {
   IconWallet,
   IconSettings,
   IconTimeline,
+  IconUserPlus,
 } from "@tabler/icons-react";
 
 import { uniqueId } from "lodash";
@@ -32,6 +33,12 @@ const Menuitems = [
     title: "Analytics",
     icon: IconChartLine,
     href: "/analytics",
+  },
+  {
+    id: uniqueId(),
+    title: "Leads",
+    icon: IconUserPlus,
+    href: "/leads",
   },
   {
     navlabel: true,
