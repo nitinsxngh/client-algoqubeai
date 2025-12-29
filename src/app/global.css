@@ -1,3 +1,15 @@
 *{
      font-family: 'Plus Jakarta Sans', Helvetica, Arial, sans-serif !important;
 }
+
+/* Prevent zoom on input focus (iOS Safari) */
+html {
+     -webkit-text-size-adjust: 100%;
+     text-size-adjust: 100%;
+}
+
+/* Prevent iOS from adjusting text size which can cause zoom */
+input, textarea, select {
+     -webkit-text-size-adjust: 100%;
+     text-size-adjust: 100%;
+}
