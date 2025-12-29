@@ -47,6 +47,8 @@ const ChatboxPage = () => {
   const [file, setFile] = useState<File | null>(null);
   const [allowAutoScrape, setAllowAutoScrape] = useState(false);
   const [themeColor, setThemeColor] = useState('#6366f1');
+  const [organizationImage, setOrganizationImage] = useState<string | null>(null);
+  const [organizationImageFile, setOrganizationImageFile] = useState<File | null>(null);
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT!;
   const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL!;
@@ -162,6 +164,8 @@ const ChatboxPage = () => {
         }
       }
 
+      // If there's a new image file and we're creating a new chatbox, we'll upload it after creation
+      // If editing, the image should already be uploaded via the upload endpoint
       const payload = {
         organizationName: orgName,
         category,
@@ -172,6 +176,7 @@ const ChatboxPage = () => {
         themeColor: themeColor,
         displayName: orgName,
         allowAutoScrape,
+        organizationLogo: organizationImage || undefined,
       };
 
       const endpoint = isEditing
@@ -189,6 +194,30 @@ const ChatboxPage = () => {
       if (!res.ok) {
         throw new Error(data.error || 'Save failed');
       }
+
+      // If there's a new image file and we just created a chatbox, upload it
+      if (organizationImageFile && !isEditing && data.chatbox?._id) {
+        try {
+          const formData = new FormData();
+          formData.append('image', organizationImageFile);
+
+          const uploadRes = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes/${data.chatbox._id}/upload-image`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            data.chatbox.organizationLogo = uploadData.imageUrl;
+            data.chatbox.configuration.profileAvatar = uploadData.imageUrl;
+            setOrganizationImage(uploadData.imageUrl);
+          }
+        } catch (uploadErr) {
+          console.error('Failed to upload image after chatbox creation:', uploadErr);
+          // Don't fail the entire save if image upload fails
+        }
+      }
+
       setChatbox(data.chatbox);
       setShowForm(false);
       setIsEditing(false);
@@ -316,6 +345,8 @@ const ChatboxPage = () => {
                     setFile(null);
                     setAllowAutoScrape(false);
                     setIsEditing(false);
+                    setOrganizationImage(null);
+                    setOrganizationImageFile(null);
                     setShowForm(true);
                   }}
                 />
@@ -398,6 +429,11 @@ const ChatboxPage = () => {
                       isScraping={isScraping}
                       scrapeStatus={scrapeStatus}
                       onScrapeWebsite={scrapeWebsiteContent}
+                      organizationImage={organizationImage}
+                      setOrganizationImage={setOrganizationImage}
+                      organizationImageFile={organizationImageFile}
+                      setOrganizationImageFile={setOrganizationImageFile}
+                      chatboxId={chatbox?._id}
                     />
                   </Box>
                   
@@ -594,6 +630,8 @@ const ChatboxPage = () => {
                     setCustomContent(chatbox.customContent);
                     setAllowAutoScrape(chatbox.allowAutoScrape ?? false);
                     setThemeColor(chatbox.configuration?.themeColor || '#6366f1');
+                    setOrganizationImage(chatbox.organizationLogo || chatbox.configuration?.profileAvatar || null);
+                    setOrganizationImageFile(null);
                     setFile(null);
                     setIsEditing(true);
                     setShowForm(true);

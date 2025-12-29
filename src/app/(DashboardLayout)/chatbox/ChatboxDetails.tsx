@@ -20,6 +20,8 @@ import {
   Fade,
   Grow,
   CircularProgress,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import { 
   IconRobot, 
@@ -32,7 +34,10 @@ import {
   IconTypography,
   IconBrandX,
   IconGlobe,
-  IconSparkles
+  IconSparkles,
+  IconPlus,
+  IconEdit,
+  IconX
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 import ChatboxEmbed from './ChatboxEmbed';
@@ -52,6 +57,11 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
   const [isBackendConnected, setIsBackendConnected] = useState<boolean | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [showEmbedModal, setShowEmbedModal] = useState(false);
+  const [predefinedQuestions, setPredefinedQuestions] = useState<any[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [newQuestion, setNewQuestion] = useState('');
+  const [newQuestionOrder, setNewQuestionOrder] = useState(0);
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT!;
 
@@ -96,6 +106,85 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
       setIsAnalyzing(false);
     }
   }, [BACKEND_URL]);
+
+  // Fetch predefined questions
+  const fetchPredefinedQuestions = useCallback(async () => {
+    if (!chatbox?._id) return;
+    setLoadingQuestions(true);
+    try {
+      const res = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes/${chatbox._id}/predefined-questions`, {
+        method: 'GET',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPredefinedQuestions(data.questions || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch predefined questions:', err);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  }, [chatbox?._id, BACKEND_URL]);
+
+  useEffect(() => {
+    fetchPredefinedQuestions();
+  }, [fetchPredefinedQuestions]);
+
+  // Add predefined question
+  const handleAddQuestion = async () => {
+    if (!newQuestion.trim() || !chatbox?._id) return;
+    try {
+      const res = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes/${chatbox._id}/predefined-questions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: newQuestion.trim(),
+          order: newQuestionOrder,
+          isActive: true,
+        }),
+      });
+      if (res.ok) {
+        setNewQuestion('');
+        setNewQuestionOrder(0);
+        fetchPredefinedQuestions();
+      }
+    } catch (err) {
+      console.error('Failed to add question:', err);
+    }
+  };
+
+  // Update predefined question
+  const handleUpdateQuestion = async (questionId: string, question: string, order: number, isActive: boolean) => {
+    if (!chatbox?._id) return;
+    try {
+      const res = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes/${chatbox._id}/predefined-questions/${questionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, order, isActive }),
+      });
+      if (res.ok) {
+        setEditingQuestionId(null);
+        fetchPredefinedQuestions();
+      }
+    } catch (err) {
+      console.error('Failed to update question:', err);
+    }
+  };
+
+  // Delete predefined question
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (!chatbox?._id) return;
+    try {
+      const res = await authenticatedFetch(`${BACKEND_URL}/api/chatboxes/${chatbox._id}/predefined-questions/${questionId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        fetchPredefinedQuestions();
+      }
+    } catch (err) {
+      console.error('Failed to delete question:', err);
+    }
+  };
 
   // Check backend connectivity and analyze website colors when component loads
   useEffect(() => {
@@ -660,6 +749,207 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
                         ))}
                       </Select>
                     </FormControl>
+                  </Box>
+
+                  {/* Predefined Questions */}
+                  <Box>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <IconSparkles size={14} color={themeColor} />
+                        <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                          Predefined Questions
+                        </Typography>
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        {predefinedQuestions.length} question{predefinedQuestions.length !== 1 ? 's' : ''}
+                      </Typography>
+                    </Stack>
+                    
+                    <Box sx={{ mb: 2 }}>
+                      <Stack spacing={1}>
+                        {loadingQuestions ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                            <CircularProgress size={20} />
+                          </Box>
+                        ) : predefinedQuestions.length > 0 ? (
+                          predefinedQuestions.map((q: any, index: number) => (
+                            <Box
+                              key={q._id || `question-${index}`}
+                              sx={{
+                                p: 1.5,
+                                borderRadius: 1.5,
+                                border: '1px solid rgba(0, 0, 0, 0.08)',
+                                bgcolor: editingQuestionId === q._id ? 'action.hover' : 'background.paper',
+                                transition: 'all 0.2s',
+                              }}
+                            >
+                              {editingQuestionId === (q._id || `question-${index}`) ? (
+                                <Stack spacing={1}>
+                                  <TextField
+                                    fullWidth
+                                    size="small"
+                                    value={q.question}
+                                    onChange={(e) => {
+                                      const updated = predefinedQuestions.map((item: any, idx: number) =>
+                                        (item._id || `question-${idx}`) === (q._id || `question-${index}`) ? { ...item, question: e.target.value } : item
+                                      );
+                                      setPredefinedQuestions(updated);
+                                    }}
+                                    sx={{ mb: 1 }}
+                                  />
+                                  <Stack direction="row" spacing={1}>
+                                    <TextField
+                                      type="number"
+                                      size="small"
+                                      label="Order"
+                                      value={q.order || 0}
+                                      onChange={(e) => {
+                                        const updated = predefinedQuestions.map((item: any, idx: number) =>
+                                          (item._id || `question-${idx}`) === (q._id || `question-${index}`) ? { ...item, order: parseInt(e.target.value) || 0 } : item
+                                        );
+                                        setPredefinedQuestions(updated);
+                                      }}
+                                      sx={{ width: 100 }}
+                                    />
+                                    <FormControlLabel
+                                      control={
+                                        <Switch
+                                          size="small"
+                                          checked={q.isActive !== false}
+                                          onChange={(e) => {
+                                            const updated = predefinedQuestions.map((item: any, idx: number) =>
+                                              (item._id || `question-${idx}`) === (q._id || `question-${index}`) ? { ...item, isActive: e.target.checked } : item
+                                            );
+                                            setPredefinedQuestions(updated);
+                                          }}
+                                        />
+                                      }
+                                      label="Active"
+                                      sx={{ m: 0 }}
+                                    />
+                                    <Button
+                                      size="small"
+                                      variant="contained"
+                                      onClick={() => {
+                                        if (q._id) {
+                                          handleUpdateQuestion(q._id, q.question, q.order || 0, q.isActive !== false);
+                                        }
+                                      }}
+                                      disabled={!q._id}
+                                      sx={{ ml: 'auto', bgcolor: themeColor }}
+                                    >
+                                      Save
+                                    </Button>
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => {
+                                        setEditingQuestionId(null);
+                                        fetchPredefinedQuestions();
+                                      }}
+                                    >
+                                      <IconX size={16} />
+                                    </IconButton>
+                                  </Stack>
+                                </Stack>
+                              ) : (
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                  <Box sx={{ flex: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {q.question}
+                                    </Typography>
+                                    <Stack direction="row" spacing={1} mt={0.5}>
+                                      <Chip
+                                        label={`Order: ${q.order || 0}`}
+                                        size="small"
+                                        sx={{ height: 20, fontSize: '0.65rem' }}
+                                      />
+                                      <Chip
+                                        label={q.isActive !== false ? 'Active' : 'Inactive'}
+                                        size="small"
+                                        color={q.isActive !== false ? 'success' : 'default'}
+                                        sx={{ height: 20, fontSize: '0.65rem' }}
+                                      />
+                                    </Stack>
+                                  </Box>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => setEditingQuestionId(q._id || `question-${index}`)}
+                                    sx={{ color: themeColor }}
+                                    disabled={!q._id}
+                                  >
+                                    <IconEdit size={16} />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => {
+                                      if (q._id) {
+                                        handleDeleteQuestion(q._id);
+                                      }
+                                    }}
+                                    disabled={!q._id}
+                                    sx={{ color: 'error.main' }}
+                                  >
+                                    <IconTrash size={16} />
+                                  </IconButton>
+                                </Stack>
+                              )}
+                            </Box>
+                          ))
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                            No predefined questions yet. Add one below.
+                          </Typography>
+                        )}
+                      </Stack>
+                    </Box>
+
+                    {/* Add New Question */}
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 1.5,
+                        border: '2px dashed rgba(0, 0, 0, 0.12)',
+                        bgcolor: 'action.hover',
+                      }}
+                    >
+                      <Typography variant="caption" sx={{ fontWeight: 500, mb: 1, display: 'block' }}>
+                        Add New Question
+                      </Typography>
+                      <Stack spacing={1}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Enter question text..."
+                          value={newQuestion}
+                          onChange={(e) => setNewQuestion(e.target.value)}
+                          disabled={isAuthenticated === false}
+                        />
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <TextField
+                            type="number"
+                            size="small"
+                            label="Order"
+                            value={newQuestionOrder}
+                            onChange={(e) => setNewQuestionOrder(parseInt(e.target.value) || 0)}
+                            sx={{ width: 100 }}
+                            disabled={isAuthenticated === false}
+                          />
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<IconPlus size={16} />}
+                            onClick={handleAddQuestion}
+                            disabled={!newQuestion.trim() || isAuthenticated === false}
+                            sx={{
+                              bgcolor: themeColor,
+                              '&:hover': { bgcolor: themeColor },
+                            }}
+                          >
+                            Add Question
+                          </Button>
+                        </Stack>
+                      </Stack>
+                    </Box>
                   </Box>
                 </Stack>
 

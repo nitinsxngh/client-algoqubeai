@@ -538,7 +538,7 @@ export default function PublicChatPage() {
 		if (imageDataUrl) await saveMessage('user', '[Image attached]', convId);
 
 		try {
-			const resp = await fetch('https://n8n.xendrax.in/webhook/efbc9578-4d9d-4130-9471-87a9fddcdc90', {
+			const resp = await fetch('https://workflow.algoqube.com/webhook/efbc9578-4d9d-4130-9471-87a9fddcdc90', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({

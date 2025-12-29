@@ -6,8 +6,12 @@ export const authenticatedFetch = async (
   // Get token from localStorage
   const token = localStorage.getItem('token');
   
+  // Check if body is FormData - if so, don't set Content-Type (browser will set it with boundary)
+  const isFormData = options.body instanceof FormData;
+  
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    // Only set Content-Type if not FormData (browser sets it automatically for FormData)
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string>),
   };
   
