@@ -6,13 +6,16 @@ import { useSearchParams } from 'next/navigation';
 // Minimal inline styles to avoid new deps
 const styles: { [k: string]: React.CSSProperties } = {
 	root: {
-		height: '100vh',
-		width: '100vw',
+		minHeight: '100vh',
+		height: '100dvh', // Use dynamic viewport height for better mobile support
+		width: '100%',
+		maxWidth: '100vw',
 		display: 'flex',
 		flexDirection: 'column',
 		background: '#ffffff',
 		color: '#2C3E50',
 		fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+		overflow: 'hidden',
 	},
 	container: {
 		width: '100%',
@@ -20,29 +23,33 @@ const styles: { [k: string]: React.CSSProperties } = {
 		maxWidth: 960,
 		margin: '0 auto',
 		display: 'flex',
-		flexDirection: 'column'
+		flexDirection: 'column',
+		padding: '0 8px',
+		boxSizing: 'border-box',
 	},
 	header: {
 		display: 'flex',
 		alignItems: 'center',
 		justifyContent: 'space-between',
-		padding: '12px 16px',
-		borderBottom: '1px solid rgba(0,0,0,0.08)'
+		padding: '12px 8px',
+		borderBottom: '1px solid rgba(0,0,0,0.08)',
+		flexShrink: 0,
 	},
 	titleWrap: { display: 'flex', alignItems: 'center', gap: 8 },
 	title: { fontWeight: 700, fontSize: 16 },
 	messages: {
 		flex: 1,
 		overflowY: 'auto',
-		padding: '16px',
+		padding: '16px 8px',
 		display: 'flex',
 		flexDirection: 'column',
 		gap: 12,
+		minHeight: 0, // Allows flex child to shrink below content size
 	},
 	row: { display: 'flex', gap: 10 },
 	rowUser: { justifyContent: 'flex-end' },
 	bubbleBot: {
-		maxWidth: '80%',
+		maxWidth: '85%',
 		background: '#E0F2F7',
 		border: '1px solid rgba(0,0,0,0.08)',
 		borderRadius: 12,
@@ -50,9 +57,10 @@ const styles: { [k: string]: React.CSSProperties } = {
 		padding: '12px 14px',
 		whiteSpace: 'pre-wrap',
 		lineHeight: 1.5,
+		wordBreak: 'break-word',
 	},
 	bubbleUser: {
-		maxWidth: '80%',
+		maxWidth: '85%',
 		background: '#F0F0F0',
 		border: '1px solid rgba(0,0,0,0.08)',
 		borderRadius: 12,
@@ -60,12 +68,14 @@ const styles: { [k: string]: React.CSSProperties } = {
 		padding: '12px 14px',
 		whiteSpace: 'pre-wrap',
 		lineHeight: 1.5,
+		wordBreak: 'break-word',
 	},
 	previewWrap: {
-		padding: '0 16px 8px 16px',
+		padding: '0 8px 8px 8px',
 		display: 'flex',
 		alignItems: 'center',
-		gap: 12
+		gap: 12,
+		flexShrink: 0,
 	},
 	previewImg: {
 		width: 64,
@@ -82,12 +92,14 @@ const styles: { [k: string]: React.CSSProperties } = {
 	},
 	footer: {
 		padding: 12,
-		borderTop: '1px solid rgba(0,0,0,0.08)'
+		borderTop: '1px solid rgba(0,0,0,0.08)',
+		flexShrink: 0,
 	},
 	inputWrap: {
 		display: 'flex',
 		alignItems: 'center',
 		gap: 8,
+		width: '100%',
 	},
 	input: {
 		flex: 1,
@@ -97,6 +109,35 @@ const styles: { [k: string]: React.CSSProperties } = {
 		border: '1px solid rgba(0,0,0,0.12)',
 		outline: 'none',
 		fontSize: 14,
+		boxSizing: 'border-box',
+	},
+	inputMobile: {
+		flex: 1,
+		width: '100%',
+		height: 48,
+		padding: '0 16px',
+		borderRadius: 12,
+		border: '1px solid rgba(0,0,0,0.12)',
+		outline: 'none',
+		fontSize: 14,
+		boxSizing: 'border-box',
+		resize: 'none',
+		overflow: 'hidden',
+		whiteSpace: 'nowrap',
+		textOverflow: 'ellipsis',
+	},
+	inputDesktop: {
+		flex: 1,
+		minHeight: 48,
+		maxHeight: 120,
+		padding: '12px 16px',
+		borderRadius: 12,
+		border: '1px solid rgba(0,0,0,0.12)',
+		outline: 'none',
+		fontSize: 14,
+		boxSizing: 'border-box',
+		resize: 'vertical',
+		overflowY: 'auto',
 	},
 	iconBtn: {
 		height: 40,
@@ -177,6 +218,7 @@ export default function PublicChatPage() {
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 
 	const msgsEndRef = useRef<HTMLDivElement | null>(null);
+	const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 	const sessionStartRef = useRef<number>(Date.now());
 	const recognitionRef = useRef<any>(null);
 	const wantsRecordingRef = useRef<boolean>(false);
@@ -189,8 +231,19 @@ export default function PublicChatPage() {
 	const [email, setEmail] = useState<string>('');
 	const [chatboxId, setChatboxId] = useState<string>('');
 	const [emailInitialized, setEmailInitialized] = useState<boolean>(false);
+	const [isMobile, setIsMobile] = useState<boolean>(false);
 
 	const valid = useMemo(() => !!chatboxId && !!email && emailInitialized, [chatboxId, email, emailInitialized]);
+
+	// Detect mobile device
+	useEffect(() => {
+		const checkMobile = () => {
+			setIsMobile(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+		};
+		checkMobile();
+		window.addEventListener('resize', checkMobile);
+		return () => window.removeEventListener('resize', checkMobile);
+	}, []);
 
 	async function getTesseractFromCdn(): Promise<any> {
 		if (typeof window === 'undefined') return null;
@@ -373,6 +426,18 @@ export default function PublicChatPage() {
 	useEffect(() => {
 		msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 	}, [messages]);
+
+	// Auto-resize textarea on desktop
+	useEffect(() => {
+		if (!isMobile && textareaRef.current) {
+			const textarea = textareaRef.current;
+			textarea.style.height = '48px';
+			const scrollHeight = textarea.scrollHeight;
+			if (scrollHeight > 48) {
+				textarea.style.height = `${Math.min(scrollHeight, 120)}px`;
+			}
+		}
+	}, [input, isMobile]);
 
 	useEffect(() => {
 		if (!chatbotName) return;
@@ -627,55 +692,85 @@ export default function PublicChatPage() {
 					</div>
 				)}
 				{imageDataUrl && (ocrLoading || (ocrText && ocrText.trim().length > 0)) && (
-					<div style={{ padding: '0 16px 8px 16px', color: '#555', fontSize: 12 }}>
+					<div style={{ padding: '0 8px 8px 8px', color: '#555', fontSize: 12 }}>
 						{ocrLoading ? 'Extracting text from image…' : `OCR: ${ocrText}`}
 					</div>
 				)}
 
 				<div style={styles.footer}>
 					<div style={styles.inputWrap}>
-						<textarea
-							style={{ ...styles.input, paddingTop: 12, paddingBottom: 12, minHeight: 48, resize: 'vertical' }}
-							placeholder={recording ? 'Listening…' : 'Type your question... (Shift+Enter for newline)'}
-							value={input}
-							onChange={(e) => setInput(e.target.value)}
-							onKeyDown={(e) => {
-								if (e.key === 'Enter' && !e.shiftKey) {
-									e.preventDefault();
-									handleSend();
-								}
-							}}
-							rows={3}
-						/>
-						<button
-							style={styles.iconBtn}
-							onClick={() => (recording ? stopVoice() : startVoice())}
-							title={recording ? 'Stop voice' : 'Start voice'}
-						>
-							{recording ? (
-								<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-									<rect x="6" y="6" width="12" height="12" rx="2" />
-								</svg>
-							) : (
+						{isMobile ? (
+							<input
+								type="text"
+								style={styles.inputMobile}
+								placeholder={recording ? 'Listening…' : 'Type your question...'}
+								value={input}
+								onChange={(e) => setInput(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter') {
+										e.preventDefault();
+										handleSend();
+									}
+								}}
+							/>
+						) : (
+							<textarea
+								ref={textareaRef}
+								style={styles.inputDesktop}
+								placeholder={recording ? 'Listening…' : 'Type your question... (Shift+Enter for newline)'}
+								value={input}
+								onChange={(e) => {
+									setInput(e.target.value);
+									// Auto-resize
+									const textarea = e.target;
+									textarea.style.height = '48px';
+									const scrollHeight = textarea.scrollHeight;
+									if (scrollHeight > 48) {
+										textarea.style.height = `${Math.min(scrollHeight, 120)}px`;
+									}
+								}}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter' && !e.shiftKey) {
+										e.preventDefault();
+										handleSend();
+									}
+								}}
+								rows={1}
+							/>
+						)}
+						{!isMobile && (
+							<button
+								style={styles.iconBtn}
+								onClick={() => (recording ? stopVoice() : startVoice())}
+								title={recording ? 'Stop voice' : 'Start voice'}
+							>
+								{recording ? (
+									<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+										<rect x="6" y="6" width="12" height="12" rx="2" />
+									</svg>
+								) : (
+									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+										<path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+										<path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+										<line x1="12" y1="19" x2="12" y2="23"/>
+										<line x1="8" y1="23" x2="16" y2="23"/>
+									</svg>
+								)}
+							</button>
+						)}
+						{!isMobile && (
+							<button
+								style={styles.iconBtn}
+								onClick={handlePickImage}
+								title="Upload image"
+							>
 								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-									<path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-									<path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-									<line x1="12" y1="19" x2="12" y2="23"/>
-									<line x1="8" y1="23" x2="16" y2="23"/>
+									<rect x="3" y="5" width="18" height="14" rx="2" ry="2"/>
+									<circle cx="8.5" cy="10.5" r="1.5"/>
+									<path d="M21 15l-4.5-4.5L12 15l-2-2L3 20"/>
 								</svg>
-							)}
-						</button>
-						<button
-							style={styles.iconBtn}
-							onClick={handlePickImage}
-							title="Upload image"
-						>
-							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-								<rect x="3" y="5" width="18" height="14" rx="2" ry="2"/>
-								<circle cx="8.5" cy="10.5" r="1.5"/>
-								<path d="M21 15l-4.5-4.5L12 15l-2-2L3 20"/>
-							</svg>
-						</button>
+							</button>
+						)}
 						<input
 							ref={fileInputRef}
 							type="file"
@@ -729,6 +824,11 @@ export default function PublicChatPage() {
 			@keyframes bounce {
 				0%, 80%, 100% { transform: translateY(0); opacity: .6; }
 				40% { transform: translateY(-6px); opacity: 1; }
+			}
+			@media (max-width: 768px) {
+				:global(body) {
+					overflow: hidden;
+				}
 			}
 			`}</style>
 		</div>
