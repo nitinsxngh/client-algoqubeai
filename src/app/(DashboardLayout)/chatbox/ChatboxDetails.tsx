@@ -37,7 +37,8 @@ import {
   IconSparkles,
   IconPlus,
   IconEdit,
-  IconX
+  IconX,
+  IconExternalLink
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 import ChatboxEmbed from './ChatboxEmbed';
@@ -503,30 +504,58 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
                       }
                     </Typography>
                   </Alert>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<IconCode size={14} />}
-                    onClick={() => setShowEmbedModal(true)}
-                    sx={{
-                      borderRadius: 1.5,
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      bgcolor: themeColor,
-                      ml: 1.5,
-                      px: 1.5,
-                      py: 0.5,
-                      fontSize: '0.75rem',
-                      '&:hover': {
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<IconExternalLink size={14} />}
+                      onClick={() => {
+                        const chatUrl = `${frontendUrl}/chat?chatboxId=${encodeURIComponent(chatbox.name)}`;
+                        window.open(chatUrl, '_blank');
+                      }}
+                      sx={{
+                        borderRadius: 1.5,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        borderColor: themeColor,
+                        color: themeColor,
+                        px: 1.5,
+                        py: 0.5,
+                        fontSize: '0.75rem',
+                        '&:hover': {
+                          borderColor: themeColor,
+                          bgcolor: `${themeColor}08`,
+                          transform: 'translateY(-1px)',
+                        },
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      Chat Page
+                    </Button>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      startIcon={<IconCode size={14} />}
+                      onClick={() => setShowEmbedModal(true)}
+                      sx={{
+                        borderRadius: 1.5,
+                        textTransform: 'none',
+                        fontWeight: 500,
                         bgcolor: themeColor,
-                        transform: 'translateY(-1px)',
-                        boxShadow: `0 4px 12px ${themeColor}40`,
-                      },
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    Embed
-                  </Button>
+                        px: 1.5,
+                        py: 0.5,
+                        fontSize: '0.75rem',
+                        '&:hover': {
+                          bgcolor: themeColor,
+                          transform: 'translateY(-1px)',
+                          boxShadow: `0 4px 12px ${themeColor}40`,
+                        },
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      Embed
+                    </Button>
+                  </Stack>
                 </Stack>
               </Paper>
             </motion.div>
@@ -956,42 +985,70 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
                 <Divider sx={{ my: 2 }} />
 
                 {/* Action Buttons */}
-                <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    startIcon={<IconTrash size={18} />}
-                    onClick={() => onDelete(chatbox._id)}
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      flex: 1,
-                    }}
-                  >
-                    Delete
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<IconCode size={18} />}
-                    onClick={() => setShowEmbedModal(true)}
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      borderColor: themeColor,
-                      color: themeColor,
-                      flex: 1,
-                      '&:hover': {
+                <Stack spacing={2} sx={{ mt: 3 }}>
+                  <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center" flexWrap="wrap">
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<IconTrash size={18} />}
+                      onClick={() => onDelete(chatbox._id)}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        flex: 1,
+                        minWidth: 120,
+                      }}
+                    >
+                      Delete
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<IconExternalLink size={18} />}
+                      onClick={() => {
+                        const chatUrl = `${frontendUrl}/chat?chatboxId=${encodeURIComponent(chatbox.name)}`;
+                        copyToClipboard(chatUrl);
+                      }}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 500,
                         borderColor: themeColor,
-                        bgcolor: `${themeColor}08`,
-                      },
-                    }}
-                  >
-                    Embed
-                  </Button>
+                        color: themeColor,
+                        flex: 1,
+                        minWidth: 120,
+                        '&:hover': {
+                          borderColor: themeColor,
+                          bgcolor: `${themeColor}08`,
+                        },
+                      }}
+                    >
+                      {copied ? 'Copied!' : 'Chat Link'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<IconCode size={18} />}
+                      onClick={() => setShowEmbedModal(true)}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        borderColor: themeColor,
+                        color: themeColor,
+                        flex: 1,
+                        minWidth: 120,
+                        '&:hover': {
+                          borderColor: themeColor,
+                          bgcolor: `${themeColor}08`,
+                        },
+                      }}
+                    >
+                      Embed
+                    </Button>
+                  </Stack>
                   <Button
                     variant="contained"
+                    fullWidth
                     startIcon={<IconSettings size={18} />}
                     onClick={onEdit}
                     sx={{
@@ -999,7 +1056,6 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
                       textTransform: 'none',
                       fontWeight: 500,
                       bgcolor: themeColor,
-                      flex: 1,
                       '&:hover': {
                         bgcolor: themeColor,
                         transform: 'translateY(-1px)',

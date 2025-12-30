@@ -232,8 +232,19 @@ export default function PublicChatPage() {
 	const [chatboxId, setChatboxId] = useState<string>('');
 	const [emailInitialized, setEmailInitialized] = useState<boolean>(false);
 	const [isMobile, setIsMobile] = useState<boolean>(false);
+	const [predefinedQuestions, setPredefinedQuestions] = useState<string[]>([]);
+	const [organizationLogo, setOrganizationLogo] = useState<string>('');
+	const [showLeadForm, setShowLeadForm] = useState<boolean>(false);
+	const [leadFormData, setLeadFormData] = useState({ name: '', email: '', phone: '', company: '', message: '' });
+	const [isSubmittingLead, setIsSubmittingLead] = useState<boolean>(false);
+	const [pendingMessage, setPendingMessage] = useState<string>('');
+	const [isInitializing, setIsInitializing] = useState<boolean>(true);
+	const [chatboxMongoId, setChatboxMongoId] = useState<string>('');
+	const [chatboxDomainUrl, setChatboxDomainUrl] = useState<string>('');
+	const [chatboxOrganizationName, setChatboxOrganizationName] = useState<string>('');
+	const [chatboxCategory, setChatboxCategory] = useState<string>('');
 
-	const valid = useMemo(() => !!chatboxId && !!email && emailInitialized, [chatboxId, email, emailInitialized]);
+	const valid = useMemo(() => !!chatboxId && emailInitialized, [chatboxId, emailInitialized]);
 
 	// Detect mobile device
 	useEffect(() => {
@@ -324,7 +335,12 @@ export default function PublicChatPage() {
 	// Initialize email and chatboxId from params or token
 	useEffect(() => {
 		async function initializeEmail() {
-			if (emailInitialized) return;
+			if (emailInitialized) {
+				setIsInitializing(false);
+				return;
+			}
+
+			setIsInitializing(true);
 
 			// If token is present, decrypt it
 			if (tokenParam) {
@@ -335,6 +351,7 @@ export default function PublicChatPage() {
 						setEmail(data.email || '');
 						setChatboxId(data.chatboxId || chatboxIdParam);
 						setEmailInitialized(true);
+						setIsInitializing(false);
 						// Remove token from URL and replace with clean URL
 						if (typeof window !== 'undefined') {
 							const url = new URL(window.location.href);
@@ -366,6 +383,7 @@ export default function PublicChatPage() {
 						setEmail(emailToUse);
 						setChatboxId(chatboxIdParam);
 						setEmailInitialized(true);
+						setIsInitializing(false);
 						// Replace URL to use token instead of email, clean up CRM params
 						if (typeof window !== 'undefined') {
 							const url = new URL(window.location.href);
@@ -385,14 +403,18 @@ export default function PublicChatPage() {
 			}
 
 			// Fallback: use params directly if no encryption available
-			if (chatboxIdParam && emailToUse) {
-				setEmail(emailToUse);
+			if (chatboxIdParam) {
+				if (emailToUse) {
+					setEmail(emailToUse);
+				}
 				setChatboxId(chatboxIdParam);
 				setEmailInitialized(true);
-			} else if (chatboxIdParam) {
-				setChatboxId(chatboxIdParam);
+			} else {
+				// No chatboxId found, mark as initialized so we can show error
 				setEmailInitialized(true);
 			}
+			
+			setIsInitializing(false);
 		}
 		initializeEmail();
 	}, [emailParam, chatboxIdParam, tokenParam, emailInitialized, BACKEND_URL]);
@@ -408,6 +430,36 @@ export default function PublicChatPage() {
 				setChatbotName(cb?.name || chatboxId);
 				setDisplayName(cb?.configuration?.displayName || 'Qube AI Assistant');
 				if (cb?.configuration?.themeColor) setThemeColor(cb.configuration.themeColor);
+				
+				// Store MongoDB _id for lead submissions
+				if (cb?._id) {
+					setChatboxMongoId(cb._id);
+				}
+				
+				// Store chatbox data for webhook context
+				if (cb?.domainUrl) {
+					setChatboxDomainUrl(cb.domainUrl);
+				}
+				if (cb?.organizationName) {
+					setChatboxOrganizationName(cb.organizationName);
+				}
+				if (cb?.category) {
+					setChatboxCategory(cb.category);
+				}
+				
+				// Set organization logo
+				if (cb?.organizationLogo || cb?.configuration?.profileAvatar) {
+					setOrganizationLogo(cb.organizationLogo || cb.configuration.profileAvatar);
+				}
+				
+				// Set predefined questions (only active ones, sorted by order)
+				if (cb?.predefinedQuestions && Array.isArray(cb.predefinedQuestions)) {
+					const activeQuestions = cb.predefinedQuestions
+						.filter((q: any) => q.isActive !== false)
+						.sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+						.map((q: any) => q.question);
+					setPredefinedQuestions(activeQuestions);
+				}
 
 				// Track visit
 				return fetch(`${BACKEND_URL}/api/analytics/visit/${encodeURIComponent(cb?.name || chatboxId)}`, { method: 'POST' }).catch(() => undefined);
@@ -584,11 +636,128 @@ export default function PublicChatPage() {
 		if (fileInputRef.current) fileInputRef.current.value = '';
 	}
 
+	// Format message text (markdown-like formatting)
+	function formatMessage(text: string): string {
+		if (!text) return '';
+		
+		// Escape HTML first
+		const escapeHtml = (unsafe: string) => {
+			return unsafe
+				.replace(/&/g, "&amp;")
+				.replace(/</g, "&lt;")
+				.replace(/>/g, "&gt;")
+				.replace(/"/g, "&quot;")
+				.replace(/'/g, "&#039;");
+		};
+		
+		let formatted = escapeHtml(text);
+		
+		// Convert **text** to <strong>text</strong>
+		formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+		
+		// Convert *text* to <em>text</em> (italic)
+		formatted = formatted.replace(/\*(?!\*)([^*]+)\*(?!\*)/g, '<em>$1</em>');
+		
+		// Convert line breaks to <br> tags
+		formatted = formatted.replace(/\n/g, '<br>');
+		
+		// Convert bullet points to HTML list
+		const paragraphs = formatted.split('<br><br>');
+		const processedParagraphs = paragraphs.map(paragraph => {
+			const lines = paragraph.split('<br>');
+			const hasBullets = lines.some(line => line.trim().startsWith('*'));
+			
+			if (hasBullets) {
+				const listItems = lines
+					.filter(line => line.trim().startsWith('*'))
+					.map(line => {
+						const content = line.trim().substring(1).trim();
+						return `<li>${content}</li>`;
+					})
+					.join('');
+				
+				const nonBulletLines = lines.filter(line => !line.trim().startsWith('*'));
+				const nonBulletText = nonBulletLines.join('<br>');
+				
+				return `${nonBulletText ? `<p>${nonBulletText}</p>` : ''}<ul>${listItems}</ul>`;
+			} else {
+				return paragraph ? `<p>${paragraph}</p>` : '';
+			}
+		});
+		
+		return processedParagraphs.join('');
+	}
+
+	// Check for lead keywords
+	function checkForLeadKeywords(message: string): boolean {
+		const leadKeywords = ['contact', 'connect', 'reach out', 'get in touch', 'speak to', 'talk to', 'call me', 'email me'];
+		const lowerMessage = message.toLowerCase();
+		return leadKeywords.some(keyword => lowerMessage.includes(keyword));
+	}
+
+	// Handle lead form submission
+	async function handleLeadFormSubmit(e: React.FormEvent) {
+		e.preventDefault();
+		if (isSubmittingLead) return;
+
+		setIsSubmittingLead(true);
+
+		// Add user message
+		if (pendingMessage) {
+			setMessages(prev => [...prev, { id: `${Date.now()}_u`, role: 'user', content: pendingMessage }]);
+			await saveMessage('user', pendingMessage, conversationId);
+		}
+
+		const leadPayload = {
+			chatboxId: chatboxMongoId || chatboxId, // Use MongoDB _id if available, fallback to name
+			name: leadFormData.name,
+			email: leadFormData.email,
+			phone: leadFormData.phone,
+			company: leadFormData.company,
+			message: leadFormData.message,
+			sourceMessage: pendingMessage,
+			conversationId: conversationId || null
+		};
+
+		try {
+			const res = await fetch(`${BACKEND_URL}/api/leads`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(leadPayload)
+			});
+
+			if (res.ok) {
+				const leadMessage = `Thank you for your interest! I've received your contact information:\n\nName: ${leadFormData.name}\nEmail: ${leadFormData.email}\nPhone: ${leadFormData.phone}\nCompany: ${leadFormData.company}${leadFormData.message ? '\nMessage: ' + leadFormData.message : ''}\n\nI'll make sure our team gets back to you soon!`;
+				setMessages(prev => [...prev, { id: `${Date.now()}_b`, role: 'bot', content: leadMessage }]);
+				await saveMessage('bot', leadMessage, conversationId);
+			} else {
+				throw new Error('Failed to submit lead');
+			}
+		} catch (error) {
+			console.error('Lead submission failed:', error);
+			const errorMsg = 'Thank you! We were unable to save your details automatically, please try again later or contact us directly.';
+			setMessages(prev => [...prev, { id: `${Date.now()}_b`, role: 'bot', content: errorMsg }]);
+			await saveMessage('bot', errorMsg, conversationId);
+		} finally {
+			setIsSubmittingLead(false);
+			setShowLeadForm(false);
+			setPendingMessage('');
+			setLeadFormData({ name: '', email: '', phone: '', company: '', message: '' });
+		}
+	}
+
 	async function handleSend() {
 		if (!input.trim() && !imageDataUrl) return;
 		if (!valid) return;
 		const text = input.trim();
 		setInput('');
+
+		// Check for lead keywords
+		if (text && checkForLeadKeywords(text)) {
+			setPendingMessage(text);
+			setShowLeadForm(true);
+			return;
+		}
 
 		if (text) {
 			setMessages(prev => [...prev, { id: `${Date.now()}_u`, role: 'user', content: text }]);
@@ -612,10 +781,12 @@ export default function PublicChatPage() {
 						context: {
 							website: {
 								url: typeof window !== 'undefined' ? window.location.origin : '',
-								domain: typeof window !== 'undefined' ? window.location.hostname : ''
+								domain: chatboxDomainUrl || (typeof window !== 'undefined' ? window.location.origin : ''),
+								organization: chatboxOrganizationName || 'Organisation',
+								category: chatboxCategory || 'General'
 							},
-							chatbotName: chatbotName || chatboxId,
-							chatbotId: chatboxId,
+							chatbotName: chatbotName || chatboxId || 'general-chatbot',
+							chatbotId: chatboxMongoId || chatboxId || '',
 							userEmail: email,
 							images: imageDataUrl ? [{ dataUrl: imageDataUrl }] : [],
 							ocrText: ocrText || ''
@@ -647,6 +818,21 @@ export default function PublicChatPage() {
 		}
 	}
 
+	// Show loading state during initialization
+	if (isInitializing) {
+		return (
+			<div style={styles.root}>
+				<div style={styles.container}>
+					<div style={styles.header}>
+						<div style={styles.titleWrap}><span style={styles.title}>Public Chat</span></div>
+					</div>
+					<div style={{ padding: 16, textAlign: 'center' }}>Loading...</div>
+				</div>
+			</div>
+		);
+	}
+
+	// Show error only after initialization is complete
 	if (!valid) {
 		return (
 			<div style={styles.root}>
@@ -654,7 +840,7 @@ export default function PublicChatPage() {
 					<div style={styles.header}>
 						<div style={styles.titleWrap}><span style={styles.title}>Public Chat</span></div>
 					</div>
-					<div style={{ padding: 16 }}>Missing required parameters. Please include &quot;chatboxId&quot; and &quot;email&quot; in the URL.</div>
+					<div style={{ padding: 16 }}>Missing required parameter. Please include &quot;chatboxId&quot; in the URL.</div>
 				</div>
 			</div>
 		);
@@ -665,21 +851,81 @@ export default function PublicChatPage() {
 			<div style={styles.container}>
 				<div style={{ ...styles.header, position: 'sticky', top: 0, background: '#fff', zIndex: 5 }}>
 					<div style={styles.titleWrap}>
-						<div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(90deg, ${themeColor}, #A8B5FF)` }} />
+						{organizationLogo ? (
+							<img 
+								src={organizationLogo} 
+								alt={displayName}
+								style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }}
+								onError={(e) => {
+									(e.target as HTMLImageElement).style.display = 'none';
+								}}
+							/>
+						) : (
+							<div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(90deg, ${themeColor}, #A8B5FF)` }} />
+						)}
 						<span style={styles.title}>{displayName}</span>
 					</div>
-					<div style={{ opacity: 0.7, fontSize: 12 }}>{email}</div>
+					{email && <div style={{ opacity: 0.7, fontSize: 12 }}>{email}</div>}
 				</div>
 
 				<div style={styles.messages}>
 					{messages.map(m => (
 						<div key={m.id} style={{ ...styles.row, ...(m.role === 'user' ? styles.rowUser : {}) }}>
-							<div style={m.role === 'user' ? styles.bubbleUser : styles.bubbleBot}>{m.content}</div>
+							<div 
+								className="formatted-message"
+								style={m.role === 'user' ? styles.bubbleUser : styles.bubbleBot}
+								dangerouslySetInnerHTML={{ __html: formatMessage(m.content) }}
+							/>
 						</div>
 					))}
 					{loading && (
 						<div style={{ ...styles.row }}>
-							<div style={styles.bubbleBot}>Typing...</div>
+							<div style={styles.bubbleBot}>
+								<div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+									<span>Thinking</span>
+									<div style={{ display: 'flex', gap: 3 }}>
+										<div style={{ width: 6, height: 6, borderRadius: '50%', background: '#999', animation: 'typing 1.4s infinite ease-in-out' }} />
+										<div style={{ width: 6, height: 6, borderRadius: '50%', background: '#999', animation: 'typing 1.4s infinite ease-in-out', animationDelay: '0.2s' }} />
+										<div style={{ width: 6, height: 6, borderRadius: '50%', background: '#999', animation: 'typing 1.4s infinite ease-in-out', animationDelay: '0.4s' }} />
+									</div>
+								</div>
+							</div>
+						</div>
+					)}
+					{predefinedQuestions.length > 0 && messages.length === 1 && (
+						<div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+							{predefinedQuestions.map((q, idx) => (
+								<button
+									key={idx}
+									onClick={() => {
+										setInput(q);
+										setTimeout(() => handleSend(), 100);
+									}}
+									style={{
+										padding: '10px 14px',
+										background: '#ffffff',
+										border: '1px solid rgba(0,0,0,0.12)',
+										borderRadius: 12,
+										fontSize: 13,
+										color: '#333',
+										cursor: 'pointer',
+										textAlign: 'left',
+										wordWrap: 'break-word',
+										whiteSpace: 'normal',
+										lineHeight: 1.4,
+									}}
+									onMouseEnter={(e) => {
+										(e.target as HTMLButtonElement).style.background = `${themeColor}15`;
+										(e.target as HTMLButtonElement).style.borderColor = themeColor;
+									}}
+									onMouseLeave={(e) => {
+										(e.target as HTMLButtonElement).style.background = '#ffffff';
+										(e.target as HTMLButtonElement).style.borderColor = 'rgba(0,0,0,0.12)';
+									}}
+								>
+									{q}
+								</button>
+							))}
 						</div>
 					)}
 					<div ref={msgsEndRef} />
@@ -798,6 +1044,187 @@ export default function PublicChatPage() {
 					</div>
 				</div>
 			)}
+			{showLeadForm && (
+				<div style={{
+					position: 'fixed',
+					top: 0,
+					left: 0,
+					right: 0,
+					bottom: 0,
+					background: 'rgba(0,0,0,0.5)',
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					zIndex: 1000,
+				}}>
+					<div style={{
+						background: '#ffffff',
+						borderRadius: 12,
+						boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+						maxWidth: 400,
+						width: '90%',
+						maxHeight: '90vh',
+						overflow: 'hidden',
+					}}>
+						<div style={{
+							padding: '16px 20px',
+							background: themeColor,
+							color: '#ffffff',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'space-between',
+						}}>
+							<h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Get in Touch</h3>
+							<button
+								onClick={() => {
+									setShowLeadForm(false);
+									setPendingMessage('');
+									setLeadFormData({ name: '', email: '', phone: '', company: '', message: '' });
+								}}
+								style={{
+									background: 'none',
+									border: 'none',
+									color: '#ffffff',
+									cursor: 'pointer',
+									padding: 4,
+								}}
+							>
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<line x1="18" y1="6" x2="6" y2="18"></line>
+									<line x1="6" y1="6" x2="18" y2="18"></line>
+								</svg>
+							</button>
+						</div>
+						<div style={{
+							padding: 20,
+							maxHeight: 'calc(90vh - 80px)',
+							overflowY: 'auto',
+						}}>
+							<p style={{ fontSize: 14, color: '#666', marginBottom: 20, textAlign: 'center' }}>
+								Please fill out your details and we&apos;ll get back to you soon!
+							</p>
+							<form onSubmit={handleLeadFormSubmit}>
+								<div style={{ marginBottom: 16 }}>
+									<label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#333', marginBottom: 6 }}>
+										Full Name *
+									</label>
+									<input
+										type="text"
+										required
+										value={leadFormData.name}
+										onChange={(e) => setLeadFormData({ ...leadFormData, name: e.target.value })}
+										style={{
+											width: '100%',
+											padding: '12px 16px',
+											border: '1px solid #ddd',
+											borderRadius: 8,
+											fontSize: 14,
+											outline: 'none',
+										}}
+									/>
+								</div>
+								<div style={{ marginBottom: 16 }}>
+									<label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#333', marginBottom: 6 }}>
+										Email Address *
+									</label>
+									<input
+										type="email"
+										required
+										value={leadFormData.email}
+										onChange={(e) => setLeadFormData({ ...leadFormData, email: e.target.value })}
+										style={{
+											width: '100%',
+											padding: '12px 16px',
+											border: '1px solid #ddd',
+											borderRadius: 8,
+											fontSize: 14,
+											outline: 'none',
+										}}
+									/>
+								</div>
+								<div style={{ marginBottom: 16 }}>
+									<label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#333', marginBottom: 6 }}>
+										Phone Number *
+									</label>
+									<input
+										type="tel"
+										required
+										value={leadFormData.phone}
+										onChange={(e) => setLeadFormData({ ...leadFormData, phone: e.target.value })}
+										style={{
+											width: '100%',
+											padding: '12px 16px',
+											border: '1px solid #ddd',
+											borderRadius: 8,
+											fontSize: 14,
+											outline: 'none',
+										}}
+									/>
+								</div>
+								<div style={{ marginBottom: 16 }}>
+									<label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#333', marginBottom: 6 }}>
+										Company Name *
+									</label>
+									<input
+										type="text"
+										required
+										value={leadFormData.company}
+										onChange={(e) => setLeadFormData({ ...leadFormData, company: e.target.value })}
+										style={{
+											width: '100%',
+											padding: '12px 16px',
+											border: '1px solid #ddd',
+											borderRadius: 8,
+											fontSize: 14,
+											outline: 'none',
+										}}
+									/>
+								</div>
+								<div style={{ marginBottom: 16 }}>
+									<label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#333', marginBottom: 6 }}>
+										Message (Optional)
+									</label>
+									<textarea
+										value={leadFormData.message}
+										onChange={(e) => setLeadFormData({ ...leadFormData, message: e.target.value })}
+										rows={3}
+										style={{
+											width: '100%',
+											padding: '12px 16px',
+											border: '1px solid #ddd',
+											borderRadius: 8,
+											fontSize: 14,
+											outline: 'none',
+											resize: 'vertical',
+											minHeight: 80,
+										}}
+									/>
+								</div>
+								<button
+									type="submit"
+									disabled={isSubmittingLead}
+									style={{
+										width: '100%',
+										padding: '12px 16px',
+										background: themeColor,
+										color: 'white',
+										border: 'none',
+										borderRadius: 8,
+										fontSize: 14,
+										fontWeight: 500,
+										cursor: isSubmittingLead ? 'not-allowed' : 'pointer',
+										marginTop: 8,
+										opacity: isSubmittingLead ? 0.6 : 1,
+									}}
+								>
+									{isSubmittingLead ? 'Submitting...' : 'Submit & Continue Chat'}
+								</button>
+							</form>
+						</div>
+					</div>
+				</div>
+			)}
+
 			<style jsx>{`
 			.pulse-ring::before, .pulse-ring::after {
 				content: '';
@@ -824,6 +1251,33 @@ export default function PublicChatPage() {
 			@keyframes bounce {
 				0%, 80%, 100% { transform: translateY(0); opacity: .6; }
 				40% { transform: translateY(-6px); opacity: 1; }
+			}
+			@keyframes typing {
+				0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+				40% { transform: scale(1); opacity: 1; }
+			}
+			:global(.formatted-message p) {
+				margin: 8px 0;
+			}
+			:global(.formatted-message p:first-child) {
+				margin-top: 0;
+			}
+			:global(.formatted-message p:last-child) {
+				margin-bottom: 0;
+			}
+			:global(.formatted-message ul) {
+				margin: 8px 0;
+				padding-left: 20px;
+			}
+			:global(.formatted-message li) {
+				margin: 4px 0;
+				line-height: 1.5;
+			}
+			:global(.formatted-message strong) {
+				font-weight: 600;
+			}
+			:global(.formatted-message em) {
+				font-style: italic;
 			}
 			@media (max-width: 768px) {
 				:global(body) {
