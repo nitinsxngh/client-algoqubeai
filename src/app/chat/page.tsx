@@ -688,11 +688,33 @@ export default function PublicChatPage() {
 		return processedParagraphs.join('');
 	}
 
-	// Check for lead keywords
+	// Check for lead keywords in user messages
 	function checkForLeadKeywords(message: string): boolean {
 		const leadKeywords = ['contact', 'connect', 'reach out', 'get in touch', 'speak to', 'talk to', 'call me', 'email me'];
 		const lowerMessage = message.toLowerCase();
 		return leadKeywords.some(keyword => lowerMessage.includes(keyword));
+	}
+
+	// Check for contact-related phrases in bot responses
+	function shouldShowContactButton(message: string): boolean {
+		const contactPhrases = [
+			'reach out to us',
+			'reach out to us directly',
+			'contact us',
+			'get in touch',
+			'connect with us',
+			'reach out',
+			'contact us directly',
+			'get in touch with us',
+			'feel free to contact',
+			'please contact',
+			'you can contact',
+			'you can reach out',
+			'for more information',
+			'reach out directly'
+		];
+		const lowerMessage = message.toLowerCase();
+		return contactPhrases.some(phrase => lowerMessage.includes(phrase));
 	}
 
 	// Handle lead form submission
@@ -871,11 +893,52 @@ export default function PublicChatPage() {
 				<div style={styles.messages}>
 					{messages.map(m => (
 						<div key={m.id} style={{ ...styles.row, ...(m.role === 'user' ? styles.rowUser : {}) }}>
-							<div 
-								className="formatted-message"
-								style={m.role === 'user' ? styles.bubbleUser : styles.bubbleBot}
-								dangerouslySetInnerHTML={{ __html: formatMessage(m.content) }}
-							/>
+							{m.role === 'bot' && shouldShowContactButton(m.content) ? (
+								// Bot message with contact button
+								<div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: '85%' }}>
+									<div 
+										className="formatted-message"
+										style={styles.bubbleBot}
+										dangerouslySetInnerHTML={{ __html: formatMessage(m.content) }}
+									/>
+									<button
+										onClick={() => {
+											setShowLeadForm(true);
+											setPendingMessage('');
+										}}
+										style={{
+											alignSelf: 'flex-start',
+											padding: '8px 16px',
+											background: themeColor,
+											color: '#ffffff',
+											border: 'none',
+											borderRadius: 8,
+											fontSize: 13,
+											fontWeight: 500,
+											cursor: 'pointer',
+											boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+											transition: 'all 0.2s',
+										}}
+										onMouseEnter={(e) => {
+											(e.target as HTMLButtonElement).style.transform = 'translateY(-1px)';
+											(e.target as HTMLButtonElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+										}}
+										onMouseLeave={(e) => {
+											(e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+											(e.target as HTMLButtonElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+										}}
+									>
+										Contact Us
+									</button>
+								</div>
+							) : (
+								// Regular message (user or bot without contact button)
+								<div 
+									className="formatted-message"
+									style={m.role === 'user' ? styles.bubbleUser : styles.bubbleBot}
+									dangerouslySetInnerHTML={{ __html: formatMessage(m.content) }}
+								/>
+							)}
 						</div>
 					))}
 					{loading && (

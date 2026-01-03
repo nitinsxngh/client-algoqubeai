@@ -22,6 +22,10 @@ import {
   CircularProgress,
   Switch,
   FormControlLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { 
   IconRobot, 
@@ -38,12 +42,24 @@ import {
   IconPlus,
   IconEdit,
   IconX,
-  IconExternalLink
+  IconExternalLink,
+  IconQrcode,
+  IconDownload
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
 import ChatboxEmbed from './ChatboxEmbed';
 import ChatboxLivePreview from './ChatboxLivePreview';
 import { authenticatedFetch } from '@/utils/api';
+
+// Dynamically import QRCode to avoid SSR issues
+const QRCode = dynamic(
+  () => import('qrcode.react').then((mod) => ({ default: mod.QRCodeSVG })),
+  {
+    ssr: false,
+    loading: () => <CircularProgress size={24} />
+  }
+);
 
 const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
   const [displayName, setDisplayName] = useState(chatbox?.configuration?.displayName || '');
@@ -63,8 +79,73 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [newQuestion, setNewQuestion] = useState('');
   const [newQuestionOrder, setNewQuestionOrder] = useState(0);
+  const [showQRCodeModal, setShowQRCodeModal] = useState(false);
+  const [qrCodeRef, setQrCodeRef] = useState<HTMLDivElement | null>(null);
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT!;
+
+  // Generate chat page URL
+  const getChatPageUrl = () => {
+    return `${frontendUrl}/chat?chatboxId=${encodeURIComponent(chatbox.name)}`;
+  };
+
+  // Download QR code as PNG
+  const downloadQRCode = () => {
+    if (!qrCodeRef) return;
+
+    const svgElement = qrCodeRef.querySelector('svg');
+    if (!svgElement) return;
+
+    try {
+      // Create a canvas to convert SVG to PNG
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const img = new Image();
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      img.onload = () => {
+        // Set canvas size with padding for better quality
+        const padding = 40;
+        canvas.width = img.width * 2 + padding * 2;
+        canvas.height = img.height * 2 + padding * 2;
+        
+        // Fill white background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw the QR code image
+        ctx.drawImage(img, padding, padding, img.width * 2, img.height * 2);
+
+        // Convert to blob and download
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const downloadUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = `chatbox-qr-${chatbox.name || 'chatbox'}-${Date.now()}.png`;
+            link.href = downloadUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
+          }
+          URL.revokeObjectURL(url);
+        }, 'image/png', 1.0);
+      };
+
+      img.onerror = () => {
+        console.error('Failed to load SVG image');
+        URL.revokeObjectURL(url);
+      };
+
+      img.src = url;
+    } catch (error) {
+      console.error('Error downloading QR code:', error);
+    }
+  };
 
   // Check backend connectivity
   const checkBackendConnectivity = useCallback(async () => {
@@ -504,13 +585,13 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
                       }
                     </Typography>
                   </Alert>
-                  <Stack direction="row" spacing={1}>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     <Button
                       variant="outlined"
                       size="small"
                       startIcon={<IconExternalLink size={14} />}
                       onClick={() => {
-                        const chatUrl = `${frontendUrl}/chat?chatboxId=${encodeURIComponent(chatbox.name)}`;
+                        const chatUrl = getChatPageUrl();
                         window.open(chatUrl, '_blank');
                       }}
                       sx={{
@@ -531,6 +612,30 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
                       }}
                     >
                       Chat Page
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<IconQrcode size={14} />}
+                      onClick={() => setShowQRCodeModal(true)}
+                      sx={{
+                        borderRadius: 1.5,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        borderColor: themeColor,
+                        color: themeColor,
+                        px: 1.5,
+                        py: 0.5,
+                        fontSize: '0.75rem',
+                        '&:hover': {
+                          borderColor: themeColor,
+                          bgcolor: `${themeColor}08`,
+                          transform: 'translateY(-1px)',
+                        },
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      QR Code
                     </Button>
                     <Button
                       variant="contained"
@@ -1006,7 +1111,7 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
                       variant="outlined"
                       startIcon={<IconExternalLink size={18} />}
                       onClick={() => {
-                        const chatUrl = `${frontendUrl}/chat?chatboxId=${encodeURIComponent(chatbox.name)}`;
+                        const chatUrl = getChatPageUrl();
                         copyToClipboard(chatUrl);
                       }}
                       sx={{
@@ -1024,6 +1129,26 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
                       }}
                     >
                       {copied ? 'Copied!' : 'Chat Link'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<IconQrcode size={18} />}
+                      onClick={() => setShowQRCodeModal(true)}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        borderColor: themeColor,
+                        color: themeColor,
+                        flex: 1,
+                        minWidth: 120,
+                        '&:hover': {
+                          borderColor: themeColor,
+                          bgcolor: `${themeColor}08`,
+                        },
+                      }}
+                    >
+                      QR Code
                     </Button>
                     <Button
                       variant="outlined"
@@ -1084,6 +1209,124 @@ const ChatboxDetails = ({ chatbox, onDelete, onEdit, frontendUrl }: any) => {
         onClose={() => setShowEmbedModal(false)}
         themeColor={themeColor}
       />
+
+      {/* QR Code Modal */}
+      <Dialog
+        open={showQRCodeModal}
+        onClose={() => setShowQRCodeModal(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #ffffff 0%, #fafafa 100%)',
+          }
+        }}
+      >
+        <DialogTitle>
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Avatar
+              sx={{
+                width: 32,
+                height: 32,
+                bgcolor: themeColor,
+              }}
+            >
+              <IconQrcode size={18} />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                QR Code for Chat Page
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Scan to open the chat page
+              </Typography>
+            </Box>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={3} alignItems="center" sx={{ py: 2 }}>
+            <Box
+              ref={setQrCodeRef}
+              sx={{
+                p: 3,
+                borderRadius: 2,
+                bgcolor: 'white',
+                border: '1px solid rgba(0, 0, 0, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <QRCode
+                value={getChatPageUrl()}
+                size={256}
+                level="H"
+                includeMargin={true}
+                fgColor={themeColor}
+                bgColor="#ffffff"
+              />
+            </Box>
+            <Box sx={{ textAlign: 'center', width: '100%' }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Chat Page URL:
+              </Typography>
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 1.5,
+                  bgcolor: 'action.hover',
+                  border: '1px solid rgba(0, 0, 0, 0.08)',
+                  wordBreak: 'break-all',
+                }}
+              >
+                <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                  {getChatPageUrl()}
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                startIcon={<IconCopy size={14} />}
+                onClick={() => {
+                  copyToClipboard(getChatPageUrl());
+                }}
+                sx={{
+                  mt: 1.5,
+                  textTransform: 'none',
+                  color: themeColor,
+                }}
+              >
+                {copied ? 'Copied!' : 'Copy URL'}
+              </Button>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => setShowQRCodeModal(false)}
+            sx={{
+              textTransform: 'none',
+              color: 'text.secondary',
+            }}
+          >
+            Close
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<IconDownload size={18} />}
+            onClick={downloadQRCode}
+            sx={{
+              textTransform: 'none',
+              bgcolor: themeColor,
+              '&:hover': {
+                bgcolor: themeColor,
+              },
+            }}
+          >
+            Download QR Code
+          </Button>
+        </DialogActions>
+      </Dialog>
     </motion.div>
   );
 };
